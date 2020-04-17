@@ -32,7 +32,7 @@ pub struct AxisParams {
     /// Initial angle that is set at system start-up, in 14bit resolution
     /// Units: 0,02197265625 degree
     rc_memory: i16,
-    follow_lpf: u8
+    follow_lpf: u8,
 }
 
 #[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
@@ -78,8 +78,8 @@ pub enum RcVirtMode {
     API = 10,
 }
 
-enum RcMap {
-    PWM { source: RcMapPWMSource },
+pub enum RcMap {
+    PWM { source: RcMapPwmSource },
     Analog { channel: u8 },
     Serial { channel: u8 },
     Virtual { channel: u8 },
@@ -88,7 +88,7 @@ enum RcMap {
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum RcMapPWMSource {
+pub enum RcMapPwmSource {
     Roll,
     Pitch,
     ExtFcRoll,
@@ -98,7 +98,7 @@ enum RcMapPWMSource {
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum RcMapAnalogChannel {
+pub enum RcMapAnalogChannel {
     ADC1 = 1,
     ADC2 = 2,
     ADC3 = 4,
@@ -134,7 +134,7 @@ impl FromPrimitive for RcMap {
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum RcMixRate {
+pub enum RcMixRate {
     FullRc = 0,
     HalfHalf = 32,
     FullFc = 63,
@@ -142,14 +142,14 @@ enum RcMixRate {
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum RcMixChannel {
+pub enum RcMixChannel {
     None = 0,
     Roll,
     Pitch,
     Yaw,
 }
 
-struct RcMix(RcMixRate, RcMixChannel);
+pub struct RcMix(RcMixRate, RcMixChannel);
 
 impl FromPrimitive for RcMix {
     fn from_i64(n: i64) -> Option<Self> {
@@ -167,7 +167,7 @@ impl FromPrimitive for RcMix {
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum FollowMode {
+pub enum FollowMode {
     Disabled = 0,
     Fc,
     Pitch,
@@ -175,7 +175,7 @@ enum FollowMode {
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(i8)]
-enum Orientation {
+pub enum Orientation {
     PosX = 1,
     PosY,
     PosZ,
@@ -186,7 +186,7 @@ enum Orientation {
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum FrameImuPos {
+pub enum FrameImuPos {
     Disabled = 0,
     BelowYaw,
     AboveYaw,
@@ -195,7 +195,7 @@ enum FrameImuPos {
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum GyroCalibrationMode {
+pub enum GyroCalibrationMode {
     /// do not skip
     NoSkip = 0,
     /// skip always
@@ -206,7 +206,7 @@ enum GyroCalibrationMode {
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum MotorOutput {
+pub enum MotorOutput {
     Disabled = 0,
     Roll,
     Pitch,
@@ -229,7 +229,7 @@ enum BeeperMode {
 
 #[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum AdaptivePid {
+pub enum AdaptivePid {
     Roll = 1,
     Pitch = 2,
     Yaw = 4,
@@ -237,7 +237,7 @@ enum AdaptivePid {
 
 #[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum GeneralFlags {
+pub enum GeneralFlags {
     RememberLastUsedProfile = 1 << 0,
     UpsideDownAuto = 1 << 1,
     SwapFrameMainImu = 1 << 2,
@@ -256,7 +256,7 @@ enum GeneralFlags {
 
 #[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum ProfileFlags {
+pub enum ProfileFlags {
     Adc1AutoDetection = 1 << 0,
     Adc2AutoDetection = 1 << 1,
     Adc3AutoDetection = 1 << 2,
@@ -275,14 +275,14 @@ enum ProfileFlags {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum SpektrumModeDSM {
+pub enum SpektrumModeDSM {
     DSM2 = 0,
     DSMX,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum SpektrumModeTime {
+pub enum SpektrumModeTime {
     /// 11ms
     Short = 0,
     /// 22ms
@@ -291,14 +291,15 @@ enum SpektrumModeTime {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum SpektrumModeBits {
+pub enum SpektrumModeBits {
     /// 10bits
     Short = 0,
     /// 11bits
     Long,
 }
 
-enum SpektrumMode {
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum SpektrumMode {
     Auto,
     Mode(SpektrumModeDSM, SpektrumModeTime, SpektrumModeBits),
 }
@@ -345,16 +346,16 @@ impl FromPrimitive for SpektrumMode {
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum AxisOrder {
+pub enum AxisOrder {
     PitchRollYaw = 0,
     YawRollPitch,
     RollYawPitch,
-    RollPitchYaw
+    RollPitchYaw,
 }
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum EulerOrder {
+pub enum EulerOrder {
     PitchRollYaw = 0,
     RollPitchYaw,
     LocalRoll,
@@ -365,37 +366,104 @@ enum EulerOrder {
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum ImuType {
+pub enum ImuType {
     Main = 1,
-    Frame
+    Frame,
 }
 
-struct ReadParams3Data {
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct RcMixes {
+    fc_roll: RcMix,
+    fc_pitch: RcMix,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct RcMaps {
+    roll: RcMap,
+    pitch: RcMap,
+    yaw: RcMap,
+    cmd: RcMap,
+    fc_roll: RcMap,
+    fc_pitch: RcMap,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Params3Data {
     /// profile ID to read or write. To access current (active) profile,
     /// specify 255. Possible values: 0..4
     profile_id: u8,
     axes: (AxisParams, AxisParams, AxisParams),
-
-    /// Units: 5 degrees/sec2 0 – disabled.
+    /// Units: 5 degrees/sec^2 0 – disabled.
     /// (starting from ver. 2.60 is deprecated; replaced by the ACC_LIMITER3)
     acc_limiter_all: u8,
-
     ext_fc_gain: [i8; 2],
-    axes_rc: (AxisRc, AxisRc, AxisRc),
     gyro_trust: u8,
     use_model: bool,
     pwm_freq: PwmFrequency,
     serial_speed: SerialSpeed,
+    rc_deadband: u8,
+    rc_expo_rate: u8,
+    rc_virt_mode: RcVirtMode,
+    rc_map: RcMaps,
+    rc_mix: RcMixes,
+    follow_mode: FollowMode,
+    follow_deadband: u8,
+    follow_expo_rate: u8,
+    axis_top: Orientation,
+    axis_right: Orientation,
+    frame_axis_top: Orientation,
+    frame_axis_right: Orientation,
+    frame_imu_pos: FrameImuPos,
+    gyro_deadband: u8,
+    gyro_sens: u8,
+    i2c_speed_fast: bool,
+    skip_gyro_calib: GyroCalibrationMode,
+    /// Negative means means alarm is disabled.
+    bat_threshold_alarm: i16,
+    /// Negative value means function is disabled.
+    bat_threshold_motors: i16,
+    /// Negative value means compensation is disabled.
+    bat_comp_ref: i16,
+    beeper_mode: BeeperMode,
+    follow_roll_mix_start: u8,
+    follow_roll_mix_range: u8,
+    frame_angle_from_motors: bool,
+    /// Disabled = 0
+    /// 1..32 - Virtual channel number as source of data to be output
+    servo_out: [u8; 4],
+    /// PWM frequency, 10 Hz per unit.
+    servo_rate: u8,
+    adaptive_pid_enabled: BitFlags<AdaptivePid>,
+    adaptive_pid_threshold: u8,
+    adaptive_pid_rate: u8,
+    adaptive_pid_recovery_factor: u8,
+    general_flags: BitFlags<GeneralFlags>,
+    profile_flags: BitFlags<ProfileFlags>,
+    spektrum_mode: SpektrumMode,
+    /// Order of hardware axes, counting from a camera. Implemented in
+    /// special builds of firmware only.
+    order_of_axes: AxisOrder,
+    /// Order of Euler angles to represent the current orientation of a
+    /// camera and the target of stabilization
+    euler_order: EulerOrder,
+    /// currently selected IMU
+    cur_imu: ImuType,
+    /// profile ID which is currently active in the controller, 0...4
+    cur_profile_id: u8,
 }
 
-impl TryFrom<Bytes> for ReadParams3Data {
+impl TryFrom<Bytes> for Params3Data {
     type Error = ();
 
     fn try_from(mut b: Bytes) -> Result<Self, Self::Error> {
         let profile_id = b.get_u8();
 
         // start w/ PID data
-        let mut axis_data = [BytesMut::with_capacity(15)];
+        let mut axis_data = [
+            BytesMut::with_capacity(15),
+            BytesMut::with_capacity(15),
+            BytesMut::with_capacity(15),
+        ];
 
         for axis_buf in axis_data.iter_mut() {
             axis_buf.put(b.split_to(6)); // P..POLES
@@ -420,16 +488,21 @@ impl TryFrom<Bytes> for ReadParams3Data {
         let rc_deadband = b.get_u8();
         let rc_expo_rate = b.get_u8();
         let rc_virt_mode: RcVirtMode = FromPrimitive::from_u8(b.get_u8())?;
-        let rc_maps: [RcMap; 6] = [
-            FromPrimitive::from_u8(b.get_u8())?,
-            FromPrimitive::from_u8(b.get_u8())?,
-            FromPrimitive::from_u8(b.get_u8())?,
-            FromPrimitive::from_u8(b.get_u8())?,
-            FromPrimitive::from_u8(b.get_u8())?,
-            FromPrimitive::from_u8(b.get_u8())?,
-        ];
 
-        let rc_mix: [RcMix; 2] = [b.get_u8().try_into()?, b.get_u8().try_into()?];
+        let rc_map = RcMaps {
+            roll: FromPrimitive::from_u8(b.get_u8())?,
+            pitch: FromPrimitive::from_u8(b.get_u8())?,
+            yaw: FromPrimitive::from_u8(b.get_u8())?,
+            cmd: FromPrimitive::from_u8(b.get_u8())?,
+            fc_roll: FromPrimitive::from_u8(b.get_u8())?,
+            fc_pitch: FromPrimitive::from_u8(b.get_u8())?,
+        };
+
+        let rc_mix = RcMixes {
+            fc_roll: FromPrimitive::from_u8(b.get_u8())?,
+            fc_pitch: FromPrimitive::from_u8(b.get_u8())?,
+        };
+
         let follow_mode: FollowMode = FromPrimitive::from_u8(b.get_u8())?;
         let follow_deadband = b.get_u8();
         let follow_expo_rate = b.get_u8();
@@ -452,11 +525,9 @@ impl TryFrom<Bytes> for ReadParams3Data {
         // RC_CMD_LOW..MENU_CMD_LONG
         b.split_to(9);
 
-        let motor_output: [MotorOutput; 3] = [
-            FromPrimitive::from_u8(b.get_u8())?,
-            FromPrimitive::from_u8(b.get_u8())?,
-            FromPrimitive::from_u8(b.get_u8())?,
-        ];
+        for axis_buf in axis_data.iter_mut() {
+            axis_buf.put_u8(b.get_u8()); // MOTOR_OUTPUT
+        }
 
         let bat_threshold_alarm = b.get_i16_le();
         let bat_threshold_motors = b.get_i16_le();
@@ -498,5 +569,60 @@ impl TryFrom<Bytes> for ReadParams3Data {
 
         let cur_imu: ImuType = FromPrimitive::from_u8(b.get_u8())?;
         let cur_profile_id = b.get_u8();
+
+        let [axis_data_roll, axis_data_yaw, axis_data_pitch] = axis_data;
+
+        Ok(Params3Data {
+            profile_id,
+            axes: (
+                AxisParams::try_from(axis_data_roll)?,
+                AxisParams::try_from(axis_data_yaw)?,
+                AxisParams::try_from(axis_data_pitch)?,
+            ),
+            acc_limiter_all,
+            ext_fc_gain,
+            gyro_trust,
+            use_model,
+            pwm_freq,
+            serial_speed,
+            rc_deadband,
+            rc_expo_rate,
+            rc_virt_mode,
+            rc_map,
+            rc_mix,
+            follow_mode,
+            follow_deadband,
+            follow_expo_rate,
+            axis_top,
+            axis_right,
+            frame_axis_top,
+            frame_axis_right,
+            frame_imu_pos,
+            gyro_deadband,
+            gyro_sens,
+            i2c_speed_fast,
+            skip_gyro_calib,
+            // TODO: RC_CMD_LOW..MENU_CMD_LONG
+            bat_threshold_alarm,
+            bat_threshold_motors,
+            bat_comp_ref,
+            beeper_mode,
+            follow_roll_mix_start,
+            follow_roll_mix_range,
+            frame_angle_from_motors,
+            servo_out,
+            servo_rate,
+            adaptive_pid_enabled,
+            adaptive_pid_threshold,
+            adaptive_pid_rate,
+            adaptive_pid_recovery_factor,
+            general_flags,
+            profile_flags,
+            spektrum_mode,
+            order_of_axes,
+            euler_order,
+            cur_imu,
+            cur_profile_id,
+        })
     }
 }

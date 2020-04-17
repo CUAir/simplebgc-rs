@@ -1,6 +1,9 @@
+mod control;
 mod read_params_3;
 
-use crate::command::RcVirtMode::Spektrum;
+pub use self::control::*;
+pub use self::read_params_3::*;
+
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
@@ -39,8 +42,7 @@ pub enum ConnectionFlag {
     USB = 1 << 0,
 }
 
-/// These are what the SimpleBGC spec calls an 'incoming command'.
-pub enum Message {
+pub enum IncomingCommand {
     BoardInfo {
         board_version: Version,
         firmware_version: Version,
@@ -62,22 +64,59 @@ pub enum Message {
         /// Units: 0,1220740379 degree/sec
         target_speed: i32,
     },
-    GetAnglesExt {
-        /// Imu angles in 14-bit resolution per full turn
-        /// Units: 0,02197265625 degree
-        imu_angle: i32,
 
-        /// Target angles in 14-bit resolution per full turn
-        /// Units: 0,02197265625 degree
-        target_angle: i32,
+    ReadParams3(Params3Data),
+}
 
-        /// Relative angle for joints between two arms of gimbal structure,
-        /// measured by encoder or 2nd Imu. Value 0 corresponds to
-        /// normal position of a gimbal. This angle does not overflow after
-        /// multiple turns.
-        stator_rotor_angle: i64,
-
-        reserved: [u8; 10],
+pub enum OutgoingCommand {
+    Control {
+        mode: ControlMode,
+        axes: (ControlAxisParams, ControlAxisParams, ControlAxisParams),
     },
-    ReadParams3(ReadParams3Data),
+}
+
+pub trait Message {
+    fn command_id(&self) -> u8;
+
+    fn payload(&self) -> Bytes;
+
+    fn to_v1_bytes(&self) -> Bytes {
+        let cmd = self.command_id();
+        let payload = self.payload();
+        let mut buf = BytesMut::with_capacity(payload.len() + 8);
+
+        buf.put_u8(0x3E);
+        buf.put_u8(cmd);
+        buf.put_u8(payload.len() as u8);
+
+        let header_checksum = (cmd + payload.len() as u8) % 256;
+        let payload_checksum = payload.iter().sum() % 256;
+
+        buf.put_u8(header_checksum);
+        buf.put(payload);
+        buf.put_u8(payload_checksum);
+
+        buf.freeze()
+    }
+
+    fn to_v2_bytes(&self) -> Bytes {
+        use crc::crc16::checksum_x25;
+
+        let cmd = self.command_id();
+        let payload = self.payload();
+        let mut buf = BytesMut::with_capacity(payload.len() + 8);
+
+        buf.put_u8(0x24);
+        buf.put_u8(cmd);
+        buf.put_u8(payload.len() as u8);
+
+        let header_checksum = (cmd + payload.len() as u8) % 256;
+        let payload_checksum = checksum_x25(&payload[..]);
+
+        buf.put_u8(header_checksum);
+        buf.put(payload);
+        buf.put_u16(payload_checksum);
+
+        buf.freeze()
+    }
 }
