@@ -78,7 +78,9 @@ pub enum OutgoingCommand {
 pub trait Message {
     fn command_id(&self) -> u8;
 
-    fn payload(&self) -> Bytes;
+    fn to_payload_bytes(&self) -> Bytes;
+
+    fn from_payload_bytes<T: Buf>(bytes: &mut T) -> Option<Self>;
 
     fn to_v1_bytes(&self) -> Bytes {
         let cmd = self.command_id();
@@ -118,5 +120,61 @@ pub trait Message {
         buf.put_u16(payload_checksum);
 
         buf.freeze()
+    }
+
+    fn from_bytes<T: Buf>(buf: &mut T) -> Option<Self> {
+        match buf[0] {
+            0x3E => Message::from_v1_bytes(buf),
+            0x24 => Message::from_v2_bytes(buf),
+            _ => None
+        }
+    }
+
+    fn from_v1_bytes<T: Buf>(buf: &mut T) -> Option<Self> {
+        // assume 1st byte was already checked
+        buf.advance(1);
+
+        let cmd = buf.get_u8();
+        let len = buf.get_u8();
+        let header_checksum = buf.get_u8();
+
+        if header_checksum != (cmd + len) % 256 {
+            return None;
+        }
+
+        let mut payload = Bytes::copy_from_slice(&buf[..len]);
+        buf.advance(len as usize);
+
+        let payload_checksum = buf.get_u8();
+
+        if payload_checksum != payload.iter().sum() % 256 {
+            return None;
+        }
+
+        return Message::from_payload_bytes(&mut payload);
+    }
+
+    fn from_v2_bytes<T: Buf>(&mut buf: T) -> Option<Self> {
+        // assume 1st byte was already checked
+        buf.advance(1);
+
+        let cmd = buf.get_u8();
+        let len = buf.get_u8();
+        let header_checksum = buf.get_u8();
+
+        if header_checksum != (cmd + len) % 256 {
+            return None;
+        }
+
+        let mut payload = Bytes::copy_from_slice(&buf[..len]);
+        buf.advance(len as usize);
+
+        let payload_checksum = buf.get_u8();
+
+        if payload_checksum != payload.iter().sum() % 256 {
+            return None;
+        }
+
+        return Message::from_payload_bytes(&mut payload);
     }
 }
