@@ -85,12 +85,12 @@ pub enum AxisControlFlags {
     /// to have a direction of rotation that does not depend on
     /// gimbal's "Inverse" and "Mode" parameters.
     /// (frw. ver. 2.62b7+)
-    ForceRcSpeed = 1 << 7,
+    // ForceRcSpeed = 1 << 6,
 
     /// Speed units changed to 0.001 deg/sec for extremely
     /// slow motion (like timelapse shooting).
     /// (frw. ver. 2.60+)
-    HighResSpeed = 1 << 8,
+    HighResSpeed = 1 << 7,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]

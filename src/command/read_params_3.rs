@@ -4,6 +4,7 @@ use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
 use std::convert::{TryFrom, TryInto};
 
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AxisParams {
     pid: (u8, u8, u8),
     power: u8,
@@ -78,6 +79,7 @@ pub enum RcVirtMode {
     API = 10,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum RcMap {
     PWM { source: RcMapPwmSource },
     Analog { channel: u8 },
@@ -149,6 +151,7 @@ pub enum RcMixChannel {
     Yaw,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RcMix(RcMixRate, RcMixChannel);
 
 impl FromPrimitive for RcMix {
@@ -236,7 +239,7 @@ pub enum AdaptivePid {
 }
 
 #[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
-#[repr(u8)]
+#[repr(u16)]
 pub enum GeneralFlags {
     RememberLastUsedProfile = 1 << 0,
     UpsideDownAuto = 1 << 1,
@@ -255,7 +258,7 @@ pub enum GeneralFlags {
 }
 
 #[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
-#[repr(u8)]
+#[repr(u16)]
 pub enum ProfileFlags {
     Adc1AutoDetection = 1 << 0,
     Adc2AutoDetection = 1 << 1,

@@ -64,7 +64,6 @@ pub enum IncomingCommand {
         /// Units: 0,1220740379 degree/sec
         target_speed: i32,
     },
-
     ReadParams3(Params3Data),
 }
 
@@ -80,7 +79,9 @@ pub trait Message {
 
     fn to_payload_bytes(&self) -> Bytes;
 
-    fn from_payload_bytes<T: Buf>(bytes: &mut T) -> Option<Self>;
+    fn from_payload_bytes<T: Buf>(bytes: &mut T) -> Option<Self>
+    where
+        Self: Sized;
 
     fn to_v1_bytes(&self) -> Bytes {
         let cmd = self.command_id();
@@ -122,15 +123,21 @@ pub trait Message {
         buf.freeze()
     }
 
-    fn from_bytes<T: Buf>(buf: &mut T) -> Option<Self> {
+    fn from_bytes<T: Buf>(buf: &mut T) -> Option<Self>
+    where
+        Self: Sized,
+    {
         match buf[0] {
             0x3E => Message::from_v1_bytes(buf),
             0x24 => Message::from_v2_bytes(buf),
-            _ => None
+            _ => None,
         }
     }
 
-    fn from_v1_bytes<T: Buf>(buf: &mut T) -> Option<Self> {
+    fn from_v1_bytes<T: Buf>(buf: &mut T) -> Option<Self>
+    where
+        Self: Sized,
+    {
         // assume 1st byte was already checked
         buf.advance(1);
 
@@ -154,7 +161,10 @@ pub trait Message {
         return Message::from_payload_bytes(&mut payload);
     }
 
-    fn from_v2_bytes<T: Buf>(&mut buf: T) -> Option<Self> {
+    fn from_v2_bytes<T: Buf>(&mut buf: T) -> Option<Self>
+    where
+        Self: Sized,
+    {
         // assume 1st byte was already checked
         buf.advance(1);
 
