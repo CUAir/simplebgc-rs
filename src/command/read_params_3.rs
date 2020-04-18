@@ -455,10 +455,10 @@ pub struct Params3Data {
     cur_profile_id: u8,
 }
 
-impl TryFrom<Bytes> for Params3Data {
+impl<T> TryFrom<T: Buf> for Params3Data {
     type Error = ();
 
-    fn try_from(mut b: Bytes) -> Result<Self, Self::Error> {
+    fn try_from(mut b: T) -> Result<Self, Self::Error> {
         let profile_id = b.get_u8();
 
         // start w/ PID data

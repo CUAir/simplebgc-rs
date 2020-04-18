@@ -1,5 +1,5 @@
 [package]
-name = "simplebgc-rs"
+name = "simplebgc"
 version = "0.1.0"
 authors = ["Ibiyemi Abiodun <ibiyemi@intulon.com>"]
 edition = "2018"

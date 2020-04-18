@@ -1,12 +1,12 @@
 mod control;
 mod read_params_3;
+mod motors_off;
 
 pub use self::control::*;
 pub use self::read_params_3::*;
+pub use self::motors_off::*;
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use enumflags2::BitFlags;
-use num_traits::FromPrimitive;
 use std::convert::{TryFrom, TryInto};
 
 pub struct Version {
@@ -67,11 +67,18 @@ pub enum IncomingCommand {
     ReadParams3(Params3Data),
 }
 
+
+
 pub enum OutgoingCommand {
     Control {
         mode: ControlMode,
         axes: (ControlAxisParams, ControlAxisParams, ControlAxisParams),
     },
+    MotorsOn,
+    MotorsOff {
+        mode: Option<MotorsOffMode>
+    },
+    WriteParams3(Param3Data)
 }
 
 pub trait Message {
@@ -161,7 +168,7 @@ pub trait Message {
         return Message::from_payload_bytes(&mut payload);
     }
 
-    fn from_v2_bytes<T: Buf>(&mut buf: T) -> Option<Self>
+    fn from_v2_bytes<T: Buf>(buf: &mut T) -> Option<Self>
     where
         Self: Sized,
     {
