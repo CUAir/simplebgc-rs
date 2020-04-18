@@ -1,12 +1,16 @@
+#[macro_use]
+mod macros;
+
 mod control;
-mod read_params_3;
 mod motors_off;
+mod read_params_3;
 
 pub use self::control::*;
-pub use self::read_params_3::*;
 pub use self::motors_off::*;
+pub use self::read_params_3::*;
 
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use enumflags2::BitFlags;
 use std::convert::{TryFrom, TryInto};
 
 pub struct Version {
@@ -67,8 +71,6 @@ pub enum IncomingCommand {
     ReadParams3(Params3Data),
 }
 
-
-
 pub enum OutgoingCommand {
     Control {
         mode: ControlMode,
@@ -76,31 +78,33 @@ pub enum OutgoingCommand {
     },
     MotorsOn,
     MotorsOff {
-        mode: Option<MotorsOffMode>
+        mode: Option<MotorsOffMode>,
     },
-    WriteParams3(Param3Data)
+    WriteParams3(Params3Data),
 }
 
 pub trait Message {
     fn command_id(&self) -> u8;
 
+    /// Returns a command ID and a `Bytes` object representing
+    /// the bytes of this payload.
     fn to_payload_bytes(&self) -> Bytes;
 
-    fn from_payload_bytes<T: Buf>(bytes: &mut T) -> Option<Self>
+    fn from_payload_bytes<T: Buf>(id: u8, bytes: &mut T) -> Option<Self>
     where
         Self: Sized;
 
     fn to_v1_bytes(&self) -> Bytes {
         let cmd = self.command_id();
-        let payload = self.payload();
+        let payload = self.to_payload_bytes();
         let mut buf = BytesMut::with_capacity(payload.len() + 8);
 
         buf.put_u8(0x3E);
         buf.put_u8(cmd);
         buf.put_u8(payload.len() as u8);
 
-        let header_checksum = (cmd + payload.len() as u8) % 256;
-        let payload_checksum = payload.iter().sum() % 256;
+        let header_checksum = cmd.wrapping_add(payload.len() as u8);
+        let payload_checksum = payload.bytes().iter().fold(0u8, |l, r| l.wrapping_add(*r));
 
         buf.put_u8(header_checksum);
         buf.put(payload);
@@ -113,14 +117,14 @@ pub trait Message {
         use crc::crc16::checksum_x25;
 
         let cmd = self.command_id();
-        let payload = self.payload();
+        let payload = self.to_payload_bytes();
         let mut buf = BytesMut::with_capacity(payload.len() + 8);
 
         buf.put_u8(0x24);
         buf.put_u8(cmd);
         buf.put_u8(payload.len() as u8);
 
-        let header_checksum = (cmd + payload.len() as u8) % 256;
+        let header_checksum = cmd.wrapping_add(payload.len() as u8);
         let payload_checksum = checksum_x25(&payload[..]);
 
         buf.put_u8(header_checksum);
@@ -130,7 +134,7 @@ pub trait Message {
         buf.freeze()
     }
 
-    fn from_bytes<T: Buf>(buf: &mut T) -> Option<Self>
+    fn from_bytes(buf: Bytes) -> Option<Self>
     where
         Self: Sized,
     {
@@ -141,7 +145,7 @@ pub trait Message {
         }
     }
 
-    fn from_v1_bytes<T: Buf>(buf: &mut T) -> Option<Self>
+    fn from_v1_bytes(mut buf: Bytes) -> Option<Self>
     where
         Self: Sized,
     {
@@ -149,26 +153,27 @@ pub trait Message {
         buf.advance(1);
 
         let cmd = buf.get_u8();
-        let len = buf.get_u8();
+        let len = buf.get_u8() as usize;
         let header_checksum = buf.get_u8();
 
-        if header_checksum != (cmd + len) % 256 {
+        // wrapping_add is the same as modulo 256
+        if header_checksum != cmd.wrapping_add(len as u8) {
             return None;
         }
 
         let mut payload = Bytes::copy_from_slice(&buf[..len]);
-        buf.advance(len as usize);
+        buf.advance(len);
 
         let payload_checksum = buf.get_u8();
 
-        if payload_checksum != payload.iter().sum() % 256 {
+        if payload_checksum != payload.bytes().iter().fold(0u8, |l, r| l.wrapping_add(*r)) {
             return None;
         }
 
-        return Message::from_payload_bytes(&mut payload);
+        return Self::from_payload_bytes(cmd, &mut payload);
     }
 
-    fn from_v2_bytes<T: Buf>(buf: &mut T) -> Option<Self>
+    fn from_v2_bytes(mut buf: Bytes) -> Option<Self>
     where
         Self: Sized,
     {
@@ -176,22 +181,38 @@ pub trait Message {
         buf.advance(1);
 
         let cmd = buf.get_u8();
-        let len = buf.get_u8();
+        let len = buf.get_u8() as usize;
         let header_checksum = buf.get_u8();
 
-        if header_checksum != (cmd + len) % 256 {
+        // overflowing_add is the same as modulo 256
+        if header_checksum != cmd.wrapping_add(len as u8) {
             return None;
         }
 
         let mut payload = Bytes::copy_from_slice(&buf[..len]);
-        buf.advance(len as usize);
+        buf.advance(len);
 
         let payload_checksum = buf.get_u8();
 
-        if payload_checksum != payload.iter().sum() % 256 {
+        if payload_checksum != payload.bytes().iter().fold(0u8, |l, r| l.wrapping_add(*r)) {
             return None;
         }
 
-        return Message::from_payload_bytes(&mut payload);
+        return Self::from_payload_bytes(cmd, &mut payload);
     }
+}
+
+pub enum PayloadParseError {
+    InvalidFlags { name: String },
+    InvalidEnum { name: String },
+}
+
+pub trait Payload {
+    fn from_bytes(b: Bytes) -> Result<Self, PayloadParseError>
+    where
+        Self: Sized;
+
+    fn to_bytes(&self) -> Bytes
+    where
+        Self: Sized;
 }

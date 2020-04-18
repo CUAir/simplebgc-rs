@@ -1,4 +1,4 @@
-use crate::command::RcVirtMode::Spektrum;
+use super::*;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
@@ -34,6 +34,22 @@ pub struct AxisParams {
     /// Units: 0,02197265625 degree
     rc_memory: i16,
     follow_lpf: u8,
+}
+
+impl Payload for AxisParams {
+    fn from_bytes(b: Bytes) -> Result<Self, PayloadParseError>
+    where
+        Self: Sized,
+    {
+        unimplemented!()
+    }
+
+    fn to_bytes(&self) -> Bytes
+    where
+        Self: Sized,
+    {
+        unimplemented!()
+    }
 }
 
 #[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
@@ -455,10 +471,8 @@ pub struct Params3Data {
     cur_profile_id: u8,
 }
 
-impl<T> TryFrom<T: Buf> for Params3Data {
-    type Error = ();
-
-    fn try_from(mut b: T) -> Result<Self, Self::Error> {
+impl Payload for Params3Data {
+    fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError> {
         let profile_id = b.get_u8();
 
         // start w/ PID data
@@ -480,9 +494,9 @@ impl<T> TryFrom<T: Buf> for Params3Data {
         }
 
         let gyro_trust = b.get_u8();
-        let use_model = b.get_u8() as bool;
-        let pwm_freq: PwmFrequency = FromPrimitive::from_u8(b.get_u8())?;
-        let serial_speed: SerialSpeed = FromPrimitive::from_u8(b.get_u8())?;
+        let use_model = b.get_u8() != 0;
+        let pwm_freq: PwmFrequency = read_enum!(b, "PWM_FREQUENCY", u8)?;
+        let serial_speed: SerialSpeed = read_enum!(b, "SERIAL_SPEED", u8)?;
 
         for axis_buf in axis_data.iter_mut() {
             axis_buf.put_i8(b.get_i8()); // RC_TRIM
@@ -490,23 +504,23 @@ impl<T> TryFrom<T: Buf> for Params3Data {
 
         let rc_deadband = b.get_u8();
         let rc_expo_rate = b.get_u8();
-        let rc_virt_mode: RcVirtMode = FromPrimitive::from_u8(b.get_u8())?;
+        let rc_virt_mode: RcVirtMode = read_enum!(b, "RC_VIRT_MODE", u8)?;
 
         let rc_map = RcMaps {
-            roll: FromPrimitive::from_u8(b.get_u8())?,
-            pitch: FromPrimitive::from_u8(b.get_u8())?,
-            yaw: FromPrimitive::from_u8(b.get_u8())?,
-            cmd: FromPrimitive::from_u8(b.get_u8())?,
-            fc_roll: FromPrimitive::from_u8(b.get_u8())?,
-            fc_pitch: FromPrimitive::from_u8(b.get_u8())?,
+            roll: read_enum!(b, "RC_MAP_ROLL", u8)?,
+            pitch: read_enum!(b, "RC_MAP_PITCH", u8)?,
+            yaw: read_enum!(b, "RC_MAP_YAW", u8)?,
+            cmd: read_enum!(b, "RC_MAP_CMD", u8)?,
+            fc_roll: read_enum!(b, "RC_MAP_FC_ROLL", u8)?,
+            fc_pitch: read_enum!(b, "RC_MAP_FC_PITCH", u8)?,
         };
 
         let rc_mix = RcMixes {
-            fc_roll: FromPrimitive::from_u8(b.get_u8())?,
-            fc_pitch: FromPrimitive::from_u8(b.get_u8())?,
+            fc_roll: read_enum!(b, "RC_MIX_FC_ROLL", u8)?,
+            fc_pitch: read_enum!(b, "RC_MIX_FC_PITCH", u8)?,
         };
 
-        let follow_mode: FollowMode = FromPrimitive::from_u8(b.get_u8())?;
+        let follow_mode: FollowMode = read_enum!(b, "FOLLOW_MODE", u8)?;
         let follow_deadband = b.get_u8();
         let follow_expo_rate = b.get_u8();
 
@@ -514,16 +528,16 @@ impl<T> TryFrom<T: Buf> for Params3Data {
             axis_buf.put_i8(b.get_i8()); // FOLLOW_OFFSET
         }
 
-        let axis_top: Orientation = FromPrimitive::from_i8(b.get_i8())?;
-        let axis_right: Orientation = FromPrimitive::from_i8(b.get_i8())?;
-        let frame_axis_top: Orientation = FromPrimitive::from_i8(b.get_i8())?;
-        let frame_axis_right: Orientation = FromPrimitive::from_i8(b.get_i8())?;
+        let axis_top: Orientation = read_enum!(b, "AXIS_TOP", i8)?;
+        let axis_right: Orientation = read_enum!(b, "AXIS_RIGHT", i8)?;
+        let frame_axis_top: Orientation = read_enum!(b, "FRAME_AXIS_TOP", i8)?;
+        let frame_axis_right: Orientation = read_enum!(b, "FRAME_AXIS_RIGHT", i8)?;
 
-        let frame_imu_pos: FrameImuPos = FromPrimitive::from_u8(b.get_u8())?;
+        let frame_imu_pos: FrameImuPos = read_enum!(b, "FRAME_IMU_POS", u8)?;
         let gyro_deadband = b.get_u8();
         let gyro_sens = b.get_u8();
-        let i2c_speed_fast = b.get_u8() as bool;
-        let skip_gyro_calib: GyroCalibrationMode = FromPrimitive::from_u8(b.get_u8())?;
+        let i2c_speed_fast = b.get_u8() != 0;
+        let skip_gyro_calib: GyroCalibrationMode = read_enum!(b, "SKIP_GYRO_CALIB", u8)?;
 
         // RC_CMD_LOW..MENU_CMD_LONG
         b.split_to(9);
@@ -535,7 +549,7 @@ impl<T> TryFrom<T: Buf> for Params3Data {
         let bat_threshold_alarm = b.get_i16_le();
         let bat_threshold_motors = b.get_i16_le();
         let bat_comp_ref = b.get_i16_le();
-        let beeper_mode: BeeperMode = FromPrimitive::from_u8(b.get_u8())?;
+        let beeper_mode: BeeperMode = read_enum!(b, "BEEPER_MODE", u8)?;
 
         let follow_roll_mix_start = b.get_u8();
         let follow_roll_mix_range = b.get_u8();
@@ -548,7 +562,7 @@ impl<T> TryFrom<T: Buf> for Params3Data {
             axis_buf.put_u8(b.get_u8()); // FOLLOW_SPEED
         }
 
-        let frame_angle_from_motors = b.get_u8() as bool;
+        let frame_angle_from_motors = b.get_u8() != 0;
 
         for axis_buf in axis_data.iter_mut() {
             axis_buf.put_i16_le(b.get_i16_le()); // RC_MEMORY
@@ -556,21 +570,22 @@ impl<T> TryFrom<T: Buf> for Params3Data {
 
         let servo_out = [b.get_u8(), b.get_u8(), b.get_u8(), b.get_u8()];
         let servo_rate = b.get_u8();
-        let adaptive_pid_enabled: BitFlags<AdaptivePid> = BitFlags::from_bits(b.get_u8())?;
+        let adaptive_pid_enabled: BitFlags<AdaptivePid> =
+            read_flags!(b, "ADAPTIVE_PID_ENABLED", u8)?;
         let adaptive_pid_threshold = b.get_u8();
         let adaptive_pid_rate = b.get_u8();
         let adaptive_pid_recovery_factor = b.get_u8();
         let follow_lpf = [b.get_u8(), b.get_u8(), b.get_u8()];
 
-        let general_flags: BitFlags<GeneralFlags> = BitFlags::from_bits(b.get_u16_le())?;
-        let profile_flags: BitFlags<ProfileFlags> = BitFlags::from_bits(b.get_u16_le())?;
+        let general_flags: BitFlags<GeneralFlags> = read_flags!(b, "ADAPTIVE_PID_ENABLED", u16_le)?;
+        let profile_flags: BitFlags<ProfileFlags> = read_flags!(b, "ADAPTIVE_PID_ENABLED", u16_le)?;
 
-        let spektrum_mode: SpektrumMode = FromPrimitive::from_u8(b.get_u8())?;
+        let spektrum_mode: SpektrumMode = read_enum!(b, "SPEKTRUM_MODE", u8)?;
 
-        let order_of_axes: AxisOrder = FromPrimitive::from_u8(b.get_u8())?;
-        let euler_order: EulerOrder = FromPrimitive::from_u8(b.get_u8())?;
+        let order_of_axes: AxisOrder = read_enum!(b, "ORDER_OF_AXES", u8)?;
+        let euler_order: EulerOrder = read_enum!(b, "EULER_ORDER", u8)?;
 
-        let cur_imu: ImuType = FromPrimitive::from_u8(b.get_u8())?;
+        let cur_imu: ImuType = read_enum!(b, "CUR_IMU", u8)?;
         let cur_profile_id = b.get_u8();
 
         let [axis_data_roll, axis_data_yaw, axis_data_pitch] = axis_data;
@@ -578,9 +593,9 @@ impl<T> TryFrom<T: Buf> for Params3Data {
         Ok(Params3Data {
             profile_id,
             axes: (
-                AxisParams::try_from(axis_data_roll)?,
-                AxisParams::try_from(axis_data_yaw)?,
-                AxisParams::try_from(axis_data_pitch)?,
+                AxisParams::from_bytes(axis_data_roll.freeze())?,
+                AxisParams::from_bytes(axis_data_yaw.freeze())?,
+                AxisParams::from_bytes(axis_data_pitch.freeze())?,
             ),
             acc_limiter_all,
             ext_fc_gain,
@@ -627,5 +642,12 @@ impl<T> TryFrom<T: Buf> for Params3Data {
             cur_imu,
             cur_profile_id,
         })
+    }
+
+    fn to_bytes(&self) -> Bytes
+    where
+        Self: Sized,
+    {
+        unimplemented!()
     }
 }

@@ -1,3 +1,5 @@
+use enumflags2::BitFlags;
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ControlMode {
     /// Mode is common for all axes
