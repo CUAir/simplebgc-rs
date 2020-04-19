@@ -2,16 +2,42 @@ use crate::commands::constants::*;
 use crate::payload::*;
 use crate::{OutgoingCommand, Params3Data};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use crc::crc16::{checksum_x25, checksum_usb};
+use std::error::Error;
+use std::fmt::{Display, Formatter};
+use std::hash::Hasher;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum MessageParseError {
     BadVersionCode,
-    BadHeaderChecksum,
-    BadPayloadChecksum,
+    BadHeaderChecksum { expected: u8, actual: u8 },
+    BadPayloadChecksum { expected: u16, actual: u16 },
     InsufficientData,
     PayloadParse(PayloadParseError),
 }
+
+impl Display for MessageParseError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MessageParseError::BadVersionCode => write!(f, "bad version code"),
+            MessageParseError::BadHeaderChecksum { expected, actual } => write!(
+                f,
+                "bad header checksum, expected {:#X}, got {:#X}",
+                expected, actual
+            ),
+            MessageParseError::BadPayloadChecksum { expected, actual } => write!(
+                f,
+                "bad payload checksum, expected {:#X}, got {:#X}",
+                expected, actual
+            ),
+            MessageParseError::InsufficientData => write!(f, "insufficient data"),
+            MessageParseError::PayloadParse(e) => {
+                write!(f, "payload could not be parsed: {:#?}", e)
+            }
+        }
+    }
+}
+
+impl Error for MessageParseError {}
 
 impl From<PayloadParseError> for MessageParseError {
     fn from(e: PayloadParseError) -> Self {
@@ -50,8 +76,6 @@ pub trait Message {
     }
 
     fn to_v2_bytes(&self) -> Bytes {
-        use crc::crc16::checksum_x25;
-
         let cmd = self.command_id();
         let payload = self.to_payload_bytes();
         let mut buf = BytesMut::with_capacity(payload.len() + 8);
@@ -61,11 +85,11 @@ pub trait Message {
         buf.put_u8(payload.len() as u8);
 
         let header_checksum = cmd.wrapping_add(payload.len() as u8);
-        let payload_checksum = checksum_x25(&payload[..]);
+        let payload_checksum = crc16::State::<crc16::ARC>::calculate(&payload[..]);
 
         buf.put_u8(header_checksum);
         buf.put(payload);
-        buf.put_u16(payload_checksum);
+        buf.put_u16_le(payload_checksum);
 
         buf.freeze()
     }
@@ -92,25 +116,33 @@ pub trait Message {
         // assume 1st byte was already checked and removed
         let cmd = buf[1];
         let len = buf[2] as usize;
-        let header_checksum = buf[3];
+        let expected_header_checksum = buf[3];
+        let header_checksum = cmd.wrapping_add(len as u8);
 
         // wrapping_add is the same as modulo 256
-        if header_checksum != cmd.wrapping_add(len as u8) {
-            return Err(MessageParseError::BadHeaderChecksum);
+        if expected_header_checksum != header_checksum {
+            return Err(MessageParseError::BadHeaderChecksum {
+                expected: expected_header_checksum,
+                actual: header_checksum,
+            });
         }
 
         if buf.len() < 5 + len {
             return Err(MessageParseError::InsufficientData);
         }
 
-        let payload = Bytes::copy_from_slice(&buf[4 .. 4 + len]);
-        let payload_checksum = buf[4 + len];
+        let payload = Bytes::copy_from_slice(&buf[4..4 + len]);
+        let expected_payload_checksum = buf[4 + len];
+        let payload_checksum = checksum_bgc(&payload[..]);
 
-        if payload_checksum != checksum_bgc(&payload[..]) {
-            return Err(MessageParseError::BadPayloadChecksum);
+        if expected_payload_checksum != payload_checksum {
+            return Err(MessageParseError::BadPayloadChecksum {
+                expected: expected_payload_checksum as u16,
+                actual: payload_checksum as u16,
+            });
         }
 
-        return Self::from_payload_bytes(cmd, payload).map(|m| (m, len + 4));
+        return Self::from_payload_bytes(cmd, payload).map(|m| (m, len + 5));
     }
 
     fn from_v2_bytes(buf: &[u8]) -> Result<(Self, usize), MessageParseError>
@@ -122,25 +154,34 @@ pub trait Message {
         // assume 1st byte was already checked and removed
         let cmd = buf[1];
         let len = buf[2] as usize;
-        let header_checksum = buf[3];
+        let expected_header_checksum = buf[3];
+        let header_checksum = cmd.wrapping_add(len as u8);
 
         // wrapping_add is the same as modulo 256
-        if header_checksum != cmd.wrapping_add(len as u8) {
-            return Err(MessageParseError::BadHeaderChecksum);
+        if expected_header_checksum != header_checksum {
+            return Err(MessageParseError::BadHeaderChecksum {
+                expected: expected_header_checksum,
+                actual: header_checksum,
+            });
         }
 
         if buf.len() < 5 + len {
             return Err(MessageParseError::InsufficientData);
         }
 
-        let payload = Bytes::copy_from_slice(&buf[4 .. 4 + len]);
-        let payload_checksum = u16::from_le_bytes([buf[4 + len], buf[5 + len]]);
+        let payload = Bytes::copy_from_slice(&buf[4..4 + len]);
+        let expected_payload_checksum = u16::from_le_bytes([buf[4 + len], buf[5 + len]]);
 
-        if payload_checksum != checksum_usb(&payload[..]) {
-            return Err(MessageParseError::BadPayloadChecksum);
+        let payload_checksum = crc16::State::<crc16::ARC>::calculate(&payload[..]);
+
+        if expected_payload_checksum != payload_checksum {
+            return Err(MessageParseError::BadPayloadChecksum {
+                expected: expected_payload_checksum,
+                actual: payload_checksum,
+            });
         }
 
-        return Self::from_payload_bytes(cmd, payload).map(|m| (m, len + 5));
+        return Self::from_payload_bytes(cmd, payload).map(|m| (m, len + 6));
     }
 }
 
@@ -208,5 +249,29 @@ impl Message for OutgoingCommand {
             },
             _ => Other { id },
         })
+    }
+}
+
+mod tests {
+    use crate::commands::constants::CMD_READ_PROFILE_NAMES;
+    use crate::ProfileFlags::OuterMotorLimitFreeRotation;
+    use crate::{Message, OutgoingCommand};
+    use std::error::Error;
+
+    #[test]
+    fn sanity() -> Result<(), Box<dyn Error>> {
+        let packet = [0x3E, 0x52, 0x01, 0x53, 0x01, 0x01];
+        let (msg, read) = OutgoingCommand::from_bytes(&packet[..])?;
+
+        assert_eq!(read, 6, "should have read 6 bytes");
+        assert_eq!(msg, OutgoingCommand::ReadParams { profile_id: 1 });
+
+        let packet = [0x24, 0x52, 0x01, 0x53, 0x01, 0xC1, 0xC0];
+        let (msg, read) = OutgoingCommand::from_bytes(&packet[..])?;
+
+        assert_eq!(read, 7, "should have read 6 bytes");
+        assert_eq!(msg, OutgoingCommand::ReadParams { profile_id: 1 });
+
+        Ok(())
     }
 }
