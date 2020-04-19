@@ -170,14 +170,14 @@ pub trait Message {
         }
 
         let payload = Bytes::copy_from_slice(&buf[4..4 + len]);
-        let expected_payload_checksum = u16::from_le_bytes([buf[4 + len], buf[5 + len]]);
 
-        let payload_checksum = crc16::State::<crc16::ARC>::calculate(&payload[..]);
+        let expected_checksum = u16::from_le_bytes([buf[4 + len], buf[5 + len]]);
+        let checksum = crc16::State::<crc16::ARC>::calculate(&buf[1..4 + len]);
 
-        if expected_payload_checksum != payload_checksum {
+        if expectedchecksum != checksum {
             return Err(MessageParseError::BadPayloadChecksum {
-                expected: expected_payload_checksum,
-                actual: payload_checksum,
+                expected: expected_checksum,
+                actual: checksum,
             });
         }
 
