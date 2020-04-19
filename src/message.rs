@@ -174,7 +174,7 @@ pub trait Message {
         let expected_checksum = u16::from_le_bytes([buf[4 + len], buf[5 + len]]);
         let checksum = crc16::State::<crc16::ARC>::calculate(&buf[1..4 + len]);
 
-        if expectedchecksum != checksum {
+        if expected_checksum != checksum {
             return Err(MessageParseError::BadPayloadChecksum {
                 expected: expected_checksum,
                 actual: checksum,
