@@ -3,6 +3,7 @@ use crate::payload::*;
 use crate::{OutgoingCommand, Params3Data};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 
+#[derive(Clone, Debug, PartialEq)]
 pub enum MessageParseError {
     BadVersionCode,
     BadHeaderChecksum,
@@ -199,7 +200,6 @@ impl Message for OutgoingCommand {
             },
             _ => Other {
                 id,
-                data: bytes.to_bytes(),
             },
         })
     }

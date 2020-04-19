@@ -14,6 +14,7 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
 use std::convert::{TryFrom, TryInto};
 
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Version {
     major: u8,
     minor: u8,
@@ -47,6 +48,7 @@ pub enum ConnectionFlag {
     USB = 1 << 0,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IncomingCommand {
     BoardInfo {
         board_version: Version,
@@ -73,6 +75,7 @@ pub enum IncomingCommand {
     ReadParams3(Params3Data),
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum OutgoingCommand {
     BoardInfo,
     BoardInfo3,
@@ -88,5 +91,5 @@ pub enum OutgoingCommand {
     WriteParams3(Params3Data),
     GetAngles,
     GetAnglesExt,
-    Other { id: u8, data: Bytes },
+    Other { id: u8 },
 }

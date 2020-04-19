@@ -1,5 +1,6 @@
 use bytes::{Buf, Bytes};
 
+#[derive(Clone, Debug, PartialEq)]
 pub enum PayloadParseError {
     InvalidFlags { name: String },
     InvalidEnum { name: String },
