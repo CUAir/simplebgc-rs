@@ -1,4 +1,4 @@
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 
 pub enum PayloadParseError {
     InvalidFlags { name: String },

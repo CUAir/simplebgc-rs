@@ -76,35 +76,17 @@ pub enum IncomingCommand {
 pub enum OutgoingCommand {
     BoardInfo,
     BoardInfo3,
-    Control {
-        mode: ControlMode,
-        axes: (ControlAxisParams, ControlAxisParams, ControlAxisParams),
-    },
+    Control(ControlData),
     MotorsOn,
-    MotorsOff {
-        mode: Option<MotorsOffMode>,
-    },
-    ReadParams {
-        profile_id: u8,
-    },
-    ReadParams3 {
-        profile_id: u8,
-    },
-    ReadParamsExt {
-        profile_id: u8,
-    },
-    ReadParamsExt2 {
-        profile_id: u8,
-    },
-    ReadParamsExt3 {
-        profile_id: u8,
-    },
+    MotorsOff { mode: Option<MotorsOffMode> },
+    ReadParams { profile_id: u8 },
+    ReadParams3 { profile_id: u8 },
+    ReadParamsExt { profile_id: u8 },
+    ReadParamsExt2 { profile_id: u8 },
+    ReadParamsExt3 { profile_id: u8 },
     WriteParams(Params3Data),
     WriteParams3(Params3Data),
     GetAngles,
     GetAnglesExt,
-    Other {
-        id: u8,
-        data: Bytes,
-    },
+    Other { id: u8, data: Bytes },
 }

@@ -1,4 +1,5 @@
 use crate::{Payload, PayloadParseError};
+use bytes::buf::BufExt;
 use bytes::{Buf, Bytes};
 use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
@@ -8,11 +9,7 @@ pub enum ControlMode {
     /// Mode is common for all axes
     Legacy(AxisControl),
     /// Mode is per-axis
-    Extended(
-        AxisControl,
-        AxisControl,
-        AxisControl,
-    ),
+    Extended(AxisControl, AxisControl, AxisControl),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -110,7 +107,7 @@ impl Payload for ControlMode {
     where
         Self: Sized,
     {
-        match b.len() {
+        match b.remaining() {
             1 => {
                 let m = read_enum!(b, "CONTROL_MODE", u8)?;
                 Ok(ControlMode::Legacy(m))
@@ -141,7 +138,10 @@ impl FromPrimitive for AxisControl {
     }
 
     fn from_u8(n: u8) -> Option<Self> {
-        Some(AxisControl(FromPrimitive::from_u8(n)?, BitFlags::from_bits(n).ok()?))
+        Some(AxisControl(
+            FromPrimitive::from_u8(n)?,
+            BitFlags::from_bits(n).ok()?,
+        ))
     }
 
     fn from_u64(n: u64) -> Option<Self> {
@@ -177,13 +177,42 @@ pub struct ControlAxisParams {
 }
 
 impl Payload for ControlAxisParams {
-    fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
+    fn from_bytes(mut b: Bytes)-> Result<Self, PayloadParseError>
     where
         Self: Sized,
     {
         Ok(ControlAxisParams {
             speed: read_enum!(b, "SPEED", i16_le, i16)?,
             angle: read_enum!(b, "ANGLE", i16_le, i16)?,
+        })
+    }
+
+    fn to_bytes(&self) -> Bytes
+    where
+        Self: Sized,
+    {
+        unimplemented!()
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ControlData {
+    mode: ControlMode,
+    axes: (ControlAxisParams, ControlAxisParams, ControlAxisParams),
+}
+
+impl Payload for ControlData {
+    fn from_bytes(mut b: Bytes)-> Result<Self, PayloadParseError>
+    where
+        Self: Sized,
+    {
+        Ok(ControlData {
+            mode: Payload::from_bytes(b.split_to(if b.remaining() == 13 { 1 } else { 3 }))?,
+            axes: (
+                Payload::from_bytes(b.split_to(2))?,
+                Payload::from_bytes(b.split_to(2))?,
+                Payload::from_bytes(b.split_to(2))?,
+            ),
         })
     }
 

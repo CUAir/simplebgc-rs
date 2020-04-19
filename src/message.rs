@@ -67,23 +67,22 @@ pub trait Message {
         buf.freeze()
     }
 
-    fn from_bytes(buf: Bytes) -> Result<Self, MessageParseError>
+    fn from_bytes(buf: &mut dyn Buf) -> Result<Self, MessageParseError>
     where
         Self: Sized,
     {
-        match buf[0] {
+        match buf.get_u8() {
             0x3E => Message::from_v1_bytes(buf),
             0x24 => Message::from_v2_bytes(buf),
             _ => Err(MessageParseError::BadVersionCode),
         }
     }
 
-    fn from_v1_bytes(mut buf: Bytes) -> Result<Self, MessageParseError>
+    fn from_v1_bytes(buf: &mut dyn Buf) -> Result<Self, MessageParseError>
     where
         Self: Sized,
     {
         // assume 1st byte was already checked
-        buf.advance(1);
 
         let cmd = buf.get_u8();
         let len = buf.get_u8() as usize;
@@ -94,8 +93,11 @@ pub trait Message {
             return Err(MessageParseError::BadHeaderChecksum);
         }
 
-        let mut payload = Bytes::copy_from_slice(&buf[..len]);
-        buf.advance(len);
+        let mut payload = BytesMut::with_capacity(len);
+        buf.copy_to_slice(&mut payload[..]);
+        unsafe {
+            payload.set_len(len);
+        }
 
         let payload_checksum = buf.get_u8();
 
@@ -103,15 +105,14 @@ pub trait Message {
             return Err(MessageParseError::BadPayloadChecksum);
         }
 
-        return Self::from_payload_bytes(cmd, payload);
+        return Self::from_payload_bytes(cmd, payload.freeze());
     }
 
-    fn from_v2_bytes(mut buf: Bytes) -> Result<Self, MessageParseError>
+    fn from_v2_bytes(buf: &mut dyn Buf) -> Result<Self, MessageParseError>
     where
         Self: Sized,
     {
         // assume 1st byte was already checked
-        buf.advance(1);
 
         let cmd = buf.get_u8();
         let len = buf.get_u8() as usize;
@@ -122,8 +123,11 @@ pub trait Message {
             return Err(MessageParseError::BadHeaderChecksum);
         }
 
-        let mut payload = Bytes::copy_from_slice(&buf[..len]);
-        buf.advance(len);
+        let mut payload = BytesMut::with_capacity(len);
+        buf.copy_to_slice(&mut payload[..]);
+        unsafe {
+            payload.set_len(len);
+        }
 
         let payload_checksum = buf.get_u8();
 
@@ -131,7 +135,7 @@ pub trait Message {
             return Err(MessageParseError::BadPayloadChecksum);
         }
 
-        return Self::from_payload_bytes(cmd, payload);
+        return Self::from_payload_bytes(cmd, payload.freeze());
     }
 }
 
@@ -184,14 +188,7 @@ impl Message for OutgoingCommand {
             CMD_WRITE_PARAMS_3 => WriteParams3(Payload::from_bytes(bytes)?),
             CMD_GET_ANGLES => GetAngles,
             CMD_GET_ANGLES_EXT => GetAnglesExt,
-            CMD_CONTROL => Control {
-                mode: Payload::from_bytes(bytes.split_to(if bytes.len() == 13 { 1 } else { 3 }))?,
-                axes: (
-                    Payload::from_bytes(bytes.split_to(2))?,
-                    Payload::from_bytes(bytes.split_to(2))?,
-                    Payload::from_bytes(bytes.split_to(2))?,
-                ),
-            },
+            CMD_CONTROL => Control(Payload::from_bytes(bytes)?),
             CMD_MOTORS_ON => MotorsOn,
             CMD_MOTORS_OFF => MotorsOff {
                 mode: if bytes.remaining() > 0 {

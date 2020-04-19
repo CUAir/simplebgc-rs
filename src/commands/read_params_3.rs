@@ -483,14 +483,18 @@ impl Payload for Params3Data {
         ];
 
         for axis_buf in axis_data.iter_mut() {
-            axis_buf.put(b.split_to(6)); // P..POLES
+            let mut tmp = Vec::with_capacity(6);
+            b.copy_to_slice(&mut tmp[..]);
+            axis_buf.put(&tmp[..]); // P..POLES
         }
 
         let acc_limiter_all = b.get_u8();
         let ext_fc_gain = [b.get_i8(), b.get_i8()];
 
         for axis_buf in axis_data.iter_mut() {
-            axis_buf.put(b.split_to(8)); // RC_MIN_ANGLE..RC_FOLLOW
+            let mut tmp = Vec::with_capacity(8);
+            b.copy_to_slice(&mut tmp[..]);
+            axis_buf.put(&tmp[..]); // RC_MIN_ANGLE..RC_FOLLOW
         }
 
         let gyro_trust = b.get_u8();
@@ -540,7 +544,7 @@ impl Payload for Params3Data {
         let skip_gyro_calib: GyroCalibrationMode = read_enum!(b, "SKIP_GYRO_CALIB", u8)?;
 
         // RC_CMD_LOW..MENU_CMD_LONG
-        b.split_to(9);
+        b.advance(9);
 
         for axis_buf in axis_data.iter_mut() {
             axis_buf.put_u8(b.get_u8()); // MOTOR_OUTPUT
@@ -588,7 +592,7 @@ impl Payload for Params3Data {
         let cur_imu: ImuType = read_enum!(b, "CUR_IMU", u8)?;
         let cur_profile_id = b.get_u8();
 
-        let [axis_data_roll, axis_data_yaw, axis_data_pitch] = axis_data;
+        let [mut axis_data_roll, mut axis_data_yaw, mut axis_data_pitch] = axis_data;
 
         Ok(Params3Data {
             profile_id,
