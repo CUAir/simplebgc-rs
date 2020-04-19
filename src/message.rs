@@ -136,7 +136,7 @@ pub trait Message {
         let payload = Bytes::copy_from_slice(&buf[4 .. 4 + len]);
         let payload_checksum = u16::from_le_bytes([buf[4 + len], buf[5 + len]]);
 
-        if payload_checksum != checksum_x25(&payload[..]) {
+        if payload_checksum != checksum_usb(&payload[..]) {
             return Err(MessageParseError::BadPayloadChecksum);
         }
 
