@@ -172,7 +172,7 @@ pub trait Message {
         let payload = Bytes::copy_from_slice(&buf[4..4 + len]);
 
         let expected_checksum = u16::from_le_bytes([buf[4 + len], buf[5 + len]]);
-        let checksum = crc16::State::<crc16::ARC>::calculate(&buf[1..4 + len]);
+        let checksum = checksum_bgc_crc(&buf[1..4 + len]);
 
         if expected_checksum != checksum {
             return Err(MessageParseError::BadPayloadChecksum {
@@ -187,6 +187,30 @@ pub trait Message {
 
 fn checksum_bgc(buf: &[u8]) -> u8 {
     buf.iter().fold(0u8, |l, r| l.wrapping_add(*r))
+}
+
+fn checksum_bgc_crc(buf: &[u8]) -> u16 {
+    const POLYNOM: u16 = 0x8005;
+    let mut crc = 0;
+    let mut data_bit = false;
+    let mut crc_bit = false;
+
+    for &byte in buf.iter() {
+        let mut shift_register = 1;
+        while shift_register > 0 {
+            data_bit = byte & shift_register != 0;
+            crc_bit = (crc_register >> 15) != 0;
+            crc_register <<= 1;
+
+            if data_bit != crc_bit {
+                crc_register ^= POLYNOM;
+            }
+
+            shift_register <<= 1;
+        }
+    }
+
+    crc
 }
 
 impl Message for OutgoingCommand {
