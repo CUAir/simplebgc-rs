@@ -70,7 +70,8 @@ pub trait Message {
         buf.freeze()
     }
 
-    fn from_bytes(buf: Bytes) -> Result<Self, MessageParseError>
+    /// On success, returns the number of bytes read from the buffer
+    fn from_bytes(buf: &[u8]) -> Result<(Self, usize), MessageParseError>
     where
         Self: Sized,
     {
@@ -82,7 +83,7 @@ pub trait Message {
         }
     }
 
-    fn from_v1_bytes(mut buf: Bytes) -> Result<Self, MessageParseError>
+    fn from_v1_bytes(buf: &[u8]) -> Result<(Self, usize), MessageParseError>
     where
         Self: Sized,
     {
@@ -102,24 +103,17 @@ pub trait Message {
             return Err(MessageParseError::InsufficientData);
         }
 
+        let payload = Bytes::copy_from_slice(&buf[4 .. 4 + len]);
         let payload_checksum = buf[4 + len];
 
-        if payload_checksum
-            != (&buf[4..4 + len])
-                .iter()
-                .fold(0u8, |l, r| l.wrapping_add(*r))
-        {
+        if payload_checksum != checksum_bgc(&payload[..]) {
             return Err(MessageParseError::BadPayloadChecksum);
         }
 
-        buf.advance(4);
-        let payload = buf.split_to(len);
-        buf.advance(1);
-
-        return Self::from_payload_bytes(cmd, payload);
+        return Self::from_payload_bytes(cmd, payload).map(|m| (m, len + 4));
     }
 
-    fn from_v2_bytes(mut buf: Bytes) -> Result<Self, MessageParseError>
+    fn from_v2_bytes(buf: &[u8]) -> Result<(Self, usize), MessageParseError>
     where
         Self: Sized,
     {
@@ -139,18 +133,19 @@ pub trait Message {
             return Err(MessageParseError::InsufficientData);
         }
 
+        let payload = Bytes::copy_from_slice(&buf[4 .. 4 + len]);
         let payload_checksum = u16::from_le_bytes([buf[4 + len], buf[5 + len]]);
 
-        if payload_checksum != checksum_x25(&buf[4..4 + len]) {
+        if payload_checksum != checksum_x25(&payload[..]) {
             return Err(MessageParseError::BadPayloadChecksum);
         }
 
-        buf.advance(4);
-        let payload = buf.split_to(len);
-        buf.advance(2);
-
-        return Self::from_payload_bytes(cmd, payload);
+        return Self::from_payload_bytes(cmd, payload).map(|m| (m, len + 5));
     }
+}
+
+fn checksum_bgc(buf: &[u8]) -> u8 {
+    buf.iter().fold(0u8, |l, r| l.wrapping_add(*r))
 }
 
 impl Message for OutgoingCommand {
