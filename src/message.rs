@@ -2,7 +2,7 @@ use crate::commands::constants::*;
 use crate::payload::*;
 use crate::{OutgoingCommand, Params3Data};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use crc::crc16::checksum_x25;
+use crc::crc16::{checksum_x25, checksum_usb};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum MessageParseError {
