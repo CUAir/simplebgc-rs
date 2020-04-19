@@ -113,7 +113,7 @@ pub trait Message {
     {
         // use indexing so as not to consume bytes if it's not valid
 
-        // assume 1st byte was already checked and removed
+        // assume version byte was already checked
         let cmd = buf[1];
         let len = buf[2] as usize;
         let expected_header_checksum = buf[3];
@@ -151,7 +151,7 @@ pub trait Message {
     {
         // use indexing so as not to consume bytes if it's not valid
 
-        // assume 1st byte was already checked and removed
+        // assume version byte was already checked
         let cmd = buf[1];
         let len = buf[2] as usize;
         let expected_header_checksum = buf[3];
@@ -288,12 +288,6 @@ mod tests {
         let (msg, read) = OutgoingCommand::from_bytes(&packet[..])?;
 
         assert_eq!(read, 6, "should have read 6 bytes");
-        assert_eq!(msg, OutgoingCommand::ReadParams { profile_id: 1 });
-
-        let packet = [0x24, 0x52, 0x01, 0x53, 0x01, 0xC1, 0xC0];
-        let (msg, read) = OutgoingCommand::from_bytes(&packet[..])?;
-
-        assert_eq!(read, 7, "should have read 6 bytes");
         assert_eq!(msg, OutgoingCommand::ReadParams { profile_id: 1 });
 
         Ok(())
