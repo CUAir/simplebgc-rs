@@ -2,12 +2,14 @@ use crate::commands::constants::*;
 use crate::payload::*;
 use crate::{OutgoingCommand, Params3Data};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use crc::crc16::checksum_x25;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum MessageParseError {
     BadVersionCode,
     BadHeaderChecksum,
     BadPayloadChecksum,
+    InsufficientData,
     PayloadParse(PayloadParseError),
 }
 
@@ -68,75 +70,86 @@ pub trait Message {
         buf.freeze()
     }
 
-    fn from_bytes(buf: &mut dyn Buf) -> Result<Self, MessageParseError>
+    fn from_bytes(buf: Bytes) -> Result<Self, MessageParseError>
     where
         Self: Sized,
     {
-        match buf.get_u8() {
+        // use indexing so as not to consume bytes if it's not valid
+        match buf[0] {
             0x3E => Message::from_v1_bytes(buf),
             0x24 => Message::from_v2_bytes(buf),
             _ => Err(MessageParseError::BadVersionCode),
         }
     }
 
-    fn from_v1_bytes(buf: &mut dyn Buf) -> Result<Self, MessageParseError>
+    fn from_v1_bytes(mut buf: Bytes) -> Result<Self, MessageParseError>
     where
         Self: Sized,
     {
-        // assume 1st byte was already checked
+        // use indexing so as not to consume bytes if it's not valid
 
-        let cmd = buf.get_u8();
-        let len = buf.get_u8() as usize;
-        let header_checksum = buf.get_u8();
+        // assume 1st byte was already checked and removed
+        let cmd = buf[1];
+        let len = buf[2] as usize;
+        let header_checksum = buf[3];
 
         // wrapping_add is the same as modulo 256
         if header_checksum != cmd.wrapping_add(len as u8) {
             return Err(MessageParseError::BadHeaderChecksum);
         }
 
-        let mut payload = BytesMut::with_capacity(len);
-        buf.copy_to_slice(&mut payload[..]);
-        unsafe {
-            payload.set_len(len);
+        if buf.len() < 5 + len {
+            return Err(MessageParseError::InsufficientData);
         }
 
-        let payload_checksum = buf.get_u8();
+        let payload_checksum = buf[4 + len];
 
-        if payload_checksum != payload.bytes().iter().fold(0u8, |l, r| l.wrapping_add(*r)) {
+        if payload_checksum
+            != (&buf[4..4 + len])
+                .iter()
+                .fold(0u8, |l, r| l.wrapping_add(*r))
+        {
             return Err(MessageParseError::BadPayloadChecksum);
         }
 
-        return Self::from_payload_bytes(cmd, payload.freeze());
+        buf.advance(4);
+        let payload = buf.split_to(len);
+        buf.advance(1);
+
+        return Self::from_payload_bytes(cmd, payload);
     }
 
-    fn from_v2_bytes(buf: &mut dyn Buf) -> Result<Self, MessageParseError>
+    fn from_v2_bytes(mut buf: Bytes) -> Result<Self, MessageParseError>
     where
         Self: Sized,
     {
-        // assume 1st byte was already checked
+        // use indexing so as not to consume bytes if it's not valid
 
-        let cmd = buf.get_u8();
-        let len = buf.get_u8() as usize;
-        let header_checksum = buf.get_u8();
+        // assume 1st byte was already checked and removed
+        let cmd = buf[1];
+        let len = buf[2] as usize;
+        let header_checksum = buf[3];
 
-        // overflowing_add is the same as modulo 256
+        // wrapping_add is the same as modulo 256
         if header_checksum != cmd.wrapping_add(len as u8) {
             return Err(MessageParseError::BadHeaderChecksum);
         }
 
-        let mut payload = BytesMut::with_capacity(len);
-        buf.copy_to_slice(&mut payload[..]);
-        unsafe {
-            payload.set_len(len);
+        if buf.len() < 5 + len {
+            return Err(MessageParseError::InsufficientData);
         }
 
-        let payload_checksum = buf.get_u8();
+        let payload_checksum = u16::from_le_bytes([buf[4 + len], buf[5 + len]]);
 
-        if payload_checksum != payload.bytes().iter().fold(0u8, |l, r| l.wrapping_add(*r)) {
+        if payload_checksum != checksum_x25(&buf[4..4 + len]) {
             return Err(MessageParseError::BadPayloadChecksum);
         }
 
-        return Self::from_payload_bytes(cmd, payload.freeze());
+        buf.advance(4);
+        let payload = buf.split_to(len);
+        buf.advance(2);
+
+        return Self::from_payload_bytes(cmd, payload);
     }
 }
 
@@ -198,9 +211,7 @@ impl Message for OutgoingCommand {
                     None
                 },
             },
-            _ => Other {
-                id,
-            },
+            _ => Other { id },
         })
     }
 }

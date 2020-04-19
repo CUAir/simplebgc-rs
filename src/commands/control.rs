@@ -177,7 +177,7 @@ pub struct ControlAxisParams {
 }
 
 impl Payload for ControlAxisParams {
-    fn from_bytes(mut b: Bytes)-> Result<Self, PayloadParseError>
+    fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
     where
         Self: Sized,
     {
@@ -202,7 +202,7 @@ pub struct ControlData {
 }
 
 impl Payload for ControlData {
-    fn from_bytes(mut b: Bytes)-> Result<Self, PayloadParseError>
+    fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
     where
         Self: Sized,
     {
