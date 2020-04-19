@@ -199,11 +199,11 @@ fn checksum_bgc_crc(buf: &[u8]) -> u16 {
         let mut shift_register = 1;
         while shift_register > 0 {
             data_bit = byte & shift_register != 0;
-            crc_bit = (crc_register >> 15) != 0;
-            crc_register <<= 1;
+            crc_bit = (crc >> 15) != 0;
+            crc <<= 1;
 
             if data_bit != crc_bit {
-                crc_register ^= POLYNOM;
+                crc ^= POLYNOM;
             }
 
             shift_register <<= 1;
