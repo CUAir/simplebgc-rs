@@ -1,12 +1,22 @@
+use crate::{Payload, PayloadParseError};
+use bytes::{Buf, Bytes};
 use enumflags2::BitFlags;
+use num_traits::FromPrimitive;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ControlMode {
     /// Mode is common for all axes
-    Legacy(AxisControlMode),
+    Legacy(AxisControl),
     /// Mode is per-axis
-    Extended(AxisControlMode, AxisControlMode, AxisControlMode),
+    Extended(
+        AxisControl,
+        AxisControl,
+        AxisControl,
+    ),
 }
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct AxisControl(AxisControlMode, BitFlags<AxisControlFlags>);
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
@@ -17,7 +27,7 @@ pub enum AxisControlMode {
     NoControl = 0,
 
     /// Camera travels with the given speed in the Euler
-    /// coordinates until the next CMD_CONTROL command
+    /// coordinates until the next CMD_CONTROL commands
     /// comes. Given angle is ignored.
     Speed = 1,
 
@@ -95,6 +105,50 @@ pub enum AxisControlFlags {
     HighResSpeed = 1 << 7,
 }
 
+impl Payload for ControlMode {
+    fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
+    where
+        Self: Sized,
+    {
+        match b.len() {
+            1 => {
+                let m = read_enum!(b, "CONTROL_MODE", u8)?;
+                Ok(ControlMode::Legacy(m))
+            }
+            3 => {
+                let roll = read_enum!(b, "CONTROL_MODE[0]", u8)?;
+                let pitch = read_enum!(b, "CONTROL_MODE[1]", u8)?;
+                let yaw = read_enum!(b, "CONTROL_MODE[2]", u8)?;
+                Ok(ControlMode::Extended(roll, pitch, yaw))
+            }
+            _ => Err(PayloadParseError::InvalidEnum {
+                name: "CONTROL_MODE[]".into(),
+            }),
+        }
+    }
+
+    fn to_bytes(&self) -> Bytes
+    where
+        Self: Sized,
+    {
+        unimplemented!()
+    }
+}
+
+impl FromPrimitive for AxisControl {
+    fn from_i64(n: i64) -> Option<Self> {
+        Self::from_u8(n as u8)
+    }
+
+    fn from_u8(n: u8) -> Option<Self> {
+        Some(AxisControl(FromPrimitive::from_u8(n)?, BitFlags::from_bits(n).ok()?))
+    }
+
+    fn from_u64(n: u64) -> Option<Self> {
+        Self::from_u8(n as u8)
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ControlAxisParams {
     /// Speed of rotation. Overrides the speed settings in the GUI and
@@ -120,4 +174,23 @@ pub struct ControlAxisParams {
     /// - MODE_RC_HIGH_RES: encodes RC signal in range -16384..16384
     /// Units: 0,02197265625 degree.
     angle: i16,
+}
+
+impl Payload for ControlAxisParams {
+    fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
+    where
+        Self: Sized,
+    {
+        Ok(ControlAxisParams {
+            speed: read_enum!(b, "SPEED", i16_le, i16)?,
+            angle: read_enum!(b, "ANGLE", i16_le, i16)?,
+        })
+    }
+
+    fn to_bytes(&self) -> Bytes
+    where
+        Self: Sized,
+    {
+        unimplemented!()
+    }
 }

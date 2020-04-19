@@ -4,4 +4,10 @@ extern crate num_derive;
 extern crate mashup;
 
 #[macro_use]
-pub mod command;
+mod commands;
+mod message;
+mod payload;
+
+pub use commands::*;
+pub use message::*;
+pub use payload::*;
