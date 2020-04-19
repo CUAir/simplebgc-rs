@@ -115,9 +115,9 @@ pub trait Message {
 
         // assume version byte was already checked
         let cmd = buf[1];
-        let len = buf[2] as usize;
+        let payload_len = buf[2] as usize;
         let expected_header_checksum = buf[3];
-        let header_checksum = cmd.wrapping_add(len as u8);
+        let header_checksum = cmd.wrapping_add(payload_len as u8);
 
         // wrapping_add is the same as modulo 256
         if expected_header_checksum != header_checksum {
@@ -127,12 +127,12 @@ pub trait Message {
             });
         }
 
-        if buf.len() < 5 + len {
+        if buf.len() < 5 + payload_len {
             return Err(MessageParseError::InsufficientData);
         }
 
-        let payload = Bytes::copy_from_slice(&buf[4..4 + len]);
-        let expected_payload_checksum = buf[4 + len];
+        let payload = Bytes::copy_from_slice(&buf[4..4 + payload_len]);
+        let expected_payload_checksum = buf[4 + payload_len];
         let payload_checksum = checksum_bgc(&payload[..]);
 
         if expected_payload_checksum != payload_checksum {
@@ -142,7 +142,7 @@ pub trait Message {
             });
         }
 
-        return Self::from_payload_bytes(cmd, payload).map(|m| (m, len + 5));
+        return Self::from_payload_bytes(cmd, payload).map(|m| (m, payload_len + 5));
     }
 
     fn from_v2_bytes(buf: &[u8]) -> Result<(Self, usize), MessageParseError>
@@ -153,9 +153,9 @@ pub trait Message {
 
         // assume version byte was already checked
         let cmd = buf[1];
-        let len = buf[2] as usize;
+        let payload_len = buf[2] as usize;
         let expected_header_checksum = buf[3];
-        let header_checksum = cmd.wrapping_add(len as u8);
+        let header_checksum = cmd.wrapping_add(payload_len as u8);
 
         // wrapping_add is the same as modulo 256
         if expected_header_checksum != header_checksum {
@@ -165,14 +165,14 @@ pub trait Message {
             });
         }
 
-        if buf.len() < 5 + len {
+        if buf.len() < 6 + payload_len {
             return Err(MessageParseError::InsufficientData);
         }
 
-        let payload = Bytes::copy_from_slice(&buf[4..4 + len]);
+        let payload = Bytes::copy_from_slice(&buf[4..4 + payload_len]);
 
-        let expected_checksum = u16::from_le_bytes([buf[4 + len], buf[5 + len]]);
-        let checksum = checksum_bgc_crc(&buf[1..4 + len]);
+        let expected_checksum = u16::from_le_bytes([buf[4 + payload_len], buf[5 + payload_len]]);
+        let checksum = checksum_bgc_crc(&buf[1..4 + payload_len]);
 
         if expected_checksum != checksum {
             return Err(MessageParseError::BadPayloadChecksum {
@@ -181,7 +181,7 @@ pub trait Message {
             });
         }
 
-        return Self::from_payload_bytes(cmd, payload).map(|m| (m, len + 6));
+        return Self::from_payload_bytes(cmd, payload).map(|m| (m, payload_len + 6));
     }
 }
 
