@@ -44,7 +44,7 @@ macro_rules! read_flags_truncate {
 }
 
 #[macro_export]
-macro_rules! axes_payload {
+macro_rules! roll_pitch_yaw {
     ($type: ty, $size: literal) => {
         impl Payload for RollPitchYaw<$type> {
             fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>

@@ -3,6 +3,7 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
 
+// TODO: derive(BgcPayload)
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AxisParams {
     pid: (u8, u8, u8),
@@ -34,6 +35,8 @@ pub struct AxisParams {
     rc_memory: i16,
     follow_lpf: u8,
 }
+
+// TODO: roll_pitch_yaw!(AxisParams, ?);
 
 impl Payload for AxisParams {
     fn from_bytes(b: Bytes) -> Result<Self, PayloadParseError>
@@ -405,6 +408,7 @@ pub struct RcMaps {
     fc_pitch: RcMap,
 }
 
+// TODO: derive(BgcPayload)
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Params3Data {
     /// profile ID to read or write. To access current (active) profile,

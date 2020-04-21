@@ -55,6 +55,8 @@ pub struct RollPitchYaw<T: Payload> {
     yaw: T,
 }
 
+impl <T: Payload + Copy> Copy for RollPitchYaw<T> {}
+
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct AngleInfo {
     /// Imu angles in 14-bit resolution per full turn
@@ -68,8 +70,7 @@ pub struct AngleInfo {
     target_angle: i32,
 }
 
-
-// axes_payload!(AngleInfo, 4);
+roll_pitch_yaw!(AngleInfo, 4);
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IncomingCommand {

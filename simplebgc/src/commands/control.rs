@@ -147,7 +147,7 @@ pub struct ControlAxisParams {
     angle: i16,
 }
 
-axes_payload!(ControlAxisParams, 4);
+roll_pitch_yaw!(ControlAxisParams, 4);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ControlData {
