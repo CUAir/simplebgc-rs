@@ -1,10 +1,9 @@
 use crate::commands::constants::*;
 use crate::payload::*;
-use crate::{OutgoingCommand, IncomingCommand, Params3Data};
+use crate::{OutgoingCommand, IncomingCommand};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::hash::Hasher;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum MessageParseError {
@@ -299,9 +298,8 @@ impl Message for IncomingCommand {
     }
 }
 
+#[cfg(test)]
 mod tests {
-    use crate::commands::constants::CMD_READ_PROFILE_NAMES;
-    use crate::ProfileFlags::OuterMotorLimitFreeRotation;
     use crate::{Message, OutgoingCommand};
     use std::error::Error;
 

@@ -2,7 +2,6 @@ use crate::*;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
-use std::convert::{TryFrom, TryInto};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AxisParams {

@@ -1,4 +1,4 @@
-use bytes::{Buf, Bytes};
+use bytes::{Bytes};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 

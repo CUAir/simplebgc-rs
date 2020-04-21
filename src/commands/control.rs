@@ -1,5 +1,4 @@
 use crate::{Payload, PayloadParseError};
-use bytes::buf::BufExt;
 use bytes::{Buf, Bytes};
 use enumflags2::BitFlags;
 use num_traits::FromPrimitive;

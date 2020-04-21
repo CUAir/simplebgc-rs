@@ -10,9 +10,9 @@ pub use self::control::*;
 pub use self::motors_off::*;
 pub use self::read_params_3::*;
 
-use bytes::{Buf, BufMut, Bytes, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
-use std::convert::{TryFrom, TryInto};
+use crate::{Payload, PayloadParseError};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Version {
@@ -49,6 +49,25 @@ pub enum ConnectionFlag {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
+pub struct RollPitchYaw<T: Payload> {
+    roll: T,
+    pitch: T,
+    yaw: T
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct AngleInfo {
+    /// Imu angles in 14-bit resolution per full turn
+    /// Units: 0,02197265625 degree
+    imu_angle: i32,
+    /// Target angles in 14-bit resolution per full turn
+    /// Units: 0,02197265625 degree
+    target_angle: i32,
+}
+
+axes_payload!(AngleInfo, 4);
+
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IncomingCommand {
     BoardInfo {
         board_version: Version,
@@ -58,43 +77,7 @@ pub enum IncomingCommand {
         frw_extra_id: u32,
         reserved: [u8; 7],
     },
-    GetAngles {
-        /// Imu angles in 14-bit resolution per full turn
-        /// Units: 0,02197265625 degree
-        roll_imu_angle: i32,
-
-        /// Target angles in 14-bit resolution per full turn
-        /// Units: 0,02197265625 degree
-        roll_target_angle: i32,
-
-        /// Target speed that gimbal should keep, over Euler axes
-        /// Units: 0,1220740379 degree/sec
-        roll_target_speed: i32,
-        
-        /// Imu angles in 14-bit resolution per full turn
-        /// Units: 0,02197265625 degree
-        pitch_imu_angle: i32,
-
-        /// Target angles in 14-bit resolution per full turn
-        /// Units: 0,02197265625 degree
-        pitch_target_angle: i32,
-
-        /// Target speed that gimbal should keep, over Euler axes
-        /// Units: 0,1220740379 degree/sec
-        pitch_target_speed: i32,
-
-        /// Imu angles in 14-bit resolution per full turn
-        /// Units: 0,02197265625 degree
-        yaw_imu_angle: i32,
-
-        /// Target angles in 14-bit resolution per full turn
-        /// Units: 0,02197265625 degree
-        yaw_target_angle: i32,
-
-        /// Target speed that gimbal should keep, over Euler axes
-        /// Units: 0,1220740379 degree/sec
-        yaw_target_speed: i32,
-    },
+    GetAngles(RollPitchYaw<AngleInfo>),
     ReadParams(Params3Data),
     ReadParams3(Params3Data),
 }

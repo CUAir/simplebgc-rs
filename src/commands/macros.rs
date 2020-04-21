@@ -1,7 +1,3 @@
-use crate::PayloadParseError;
-use enumflags2::BitFlags;
-use num_traits::{FromPrimitive, ToPrimitive};
-
 #[macro_export]
 macro_rules! read_enum {
     ($buf: ident, $name: literal, $repr: ident) => {
@@ -45,4 +41,29 @@ macro_rules! read_flags_truncate {
             BitFlags::from_bits_truncate($buf."get"())
         }
     }};
+}
+
+#[macro_export]
+macro_rules! axes_payload {
+    ($type: ty, $size: literal) => {
+        impl Payload for RollPitchYaw<$type> {
+            fn from_bytes(b: Bytes) -> Result<Self, PayloadParseError> where
+                Self: Sized {
+                Ok(RollPitchYaw {
+                    roll: Payload::from_bytes(b.split_to($size))?,
+                    pitch: Payload::from_bytes(b.split_to($size))?,
+                    yaw: Payload::from_bytes(b.split_to($size))?,
+                })
+            }
+
+            fn to_bytes(&self) -> Bytes where
+                Self: Sized {
+                let mut b = BytesMut::with_capacity($size * 3);
+                b.put(Payload::to_bytes(self.roll));
+                b.put(Payload::to_bytes(self.pitch));
+                b.put(Payload::to_bytes(self.yaw));
+                b.freeze()
+            }
+        }
+    };
 }
