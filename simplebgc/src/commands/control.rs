@@ -1,5 +1,5 @@
-use crate::{Payload, PayloadParseError};
-use bytes::{Buf, Bytes};
+use crate::{Payload, PayloadParseError, RollPitchYaw};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
 
@@ -118,7 +118,7 @@ impl FromPrimitive for AxisControl {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct ControlAxisParams {
     /// Speed of rotation. Overrides the speed settings in the GUI and
     /// from the adjustable variables.
@@ -135,6 +135,7 @@ pub struct ControlAxisParams {
     /// Units: 0,1220740379 deg./sec.
     /// (0.001 deg./sec., if the CONTROL_FLAG_HIGH_RES_SPEED
     /// is set)
+    #[bgc_raw("SPEED")]
     speed: i16,
     /// Depends on the MODE parameter:
     /// - MODE_ANGLE, MODE_SPEED_ANGLE: encodes the target angle
@@ -142,32 +143,16 @@ pub struct ControlAxisParams {
     /// - MODE_RC: encodes RC signal in range -500..500
     /// - MODE_RC_HIGH_RES: encodes RC signal in range -16384..16384
     /// Units: 0,02197265625 degree.
+    #[bgc_raw("ANGLE")]
     angle: i16,
 }
 
-impl Payload for ControlAxisParams {
-    fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
-    where
-        Self: Sized,
-    {
-        Ok(ControlAxisParams {
-            speed: read_enum!(b, "SPEED", i16_le, i16)?,
-            angle: read_enum!(b, "ANGLE", i16_le, i16)?,
-        })
-    }
+axes_payload!(ControlAxisParams, 4);
 
-    fn to_bytes(&self) -> Bytes
-    where
-        Self: Sized,
-    {
-        unimplemented!()
-    }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ControlData {
     mode: ControlMode,
-    axes: (ControlAxisParams, ControlAxisParams, ControlAxisParams),
+    axes: RollPitchYaw<ControlAxisParams>,
 }
 
 impl Payload for ControlData {
@@ -185,11 +170,7 @@ impl Payload for ControlData {
                     read_enum!(b, "CONTROL_MODE[2]", u8)?,
                 )
             },
-            axes: (
-                Payload::from_bytes(b.split_to(4))?,
-                Payload::from_bytes(b.split_to(4))?,
-                Payload::from_bytes(b.split_to(4))?,
-            ),
+            axes: Payload::from_bytes(b)?,
         })
     }
 

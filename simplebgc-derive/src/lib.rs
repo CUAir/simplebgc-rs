@@ -18,7 +18,7 @@ enum FieldKind {
 }
 
 #[proc_macro_error]
-#[proc_macro_derive(BgcPayload, attributes(bgc_flags, bgc_enum, bgc_payload, bgc_raw, bgc_size))]
+#[proc_macro_derive(BgcPayload, attributes(bgc_flags, bgc_enum, bgc_payload, bgc_raw, bgc_size, repr))]
 pub fn payload_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let type_ident = input.ident;
@@ -143,10 +143,35 @@ fn get_stmt_for_field(idx: usize, field: &Field) -> Option<(Ident, Option<Ident>
     let field_ident = field.ident.clone();
     let variable_ident = field_ident.clone().unwrap_or(format_ident!("field{}", idx));
     let mut field_kind = None;
+
     let mut spec_name = None;
     let mut spec_size = None;
+    let mut spec_repr = None;
 
     for attr in field.attrs.iter() {
+        if attr.path.is_ident("repr") {
+            if spec_repr.is_some() {
+                emit_error!(attr, "multiple repr attributes on field not allowed");
+                return None;
+            }
+
+            spec_repr = Some(match attr.parse_args::<Type>() {
+                Ok(s) => match get_primitive_type(&s) {
+                    Some(s) => s.clone(),
+                    None => {
+                        emit_error!(attr, "invalid repr attribute");
+                        return None;
+                    }
+                },
+                Err(_) => {
+                    emit_error!(attr, "invalid repr attribute");
+                    return None;
+                }
+            });
+
+            continue;
+        }
+
         if attr.path.is_ident("bgc_size") {
             if spec_size.is_some() {
                 emit_error!(attr, "multiple size attributes on field not allowed");
@@ -166,6 +191,8 @@ fn get_stmt_for_field(idx: usize, field: &Field) -> Option<(Ident, Option<Ident>
                     return None;
                 }
             });
+
+            continue;
         }
 
         let new_field_kind = if attr.path.is_ident("bgc_flags") {
@@ -238,12 +265,24 @@ fn get_stmt_for_field(idx: usize, field: &Field) -> Option<(Ident, Option<Ident>
             ))
         },
         FieldKind::Flags | FieldKind::Enum | FieldKind::Raw => {
-            let repr = match get_primitive_type(&field.ty) {
-                Some(r) => r.clone(),
-                None => {
-                    emit_error!(field.ty, "field must be primitive type");
-                    return None;
-                }
+            let repr = match field_kind {
+                FieldKind::Flags | FieldKind::Enum =>
+                    match spec_repr {
+                        Some(r) => r.clone(),
+                        None => {
+                            emit_error!(field.ty, "repr must be specified for enum and flags values");
+                            return None;
+                        }
+                    },
+                FieldKind::Raw => match
+                get_primitive_type(&field.ty) {
+                    Some(r) => r.clone(),
+                    None => {
+                        emit_error!(field.ty, "field must be primitive type for raw values");
+                        return None;
+                    }
+                },
+                _ => unreachable!()
             };
 
             let repr_endian = if repr == "u8" || repr == "i8" {
