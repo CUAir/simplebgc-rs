@@ -8,6 +8,7 @@ use proc_macro_error::*;
 use quote::{format_ident, quote};
 use syn::group::Group;
 use syn::punctuated::Punctuated;
+use syn::token::Token;
 use syn::*;
 
 enum FieldKind {
@@ -18,7 +19,10 @@ enum FieldKind {
 }
 
 #[proc_macro_error]
-#[proc_macro_derive(BgcPayload, attributes(bgc_flags, bgc_enum, bgc_payload, bgc_raw, bgc_size, repr))]
+#[proc_macro_derive(
+    BgcPayload,
+    attributes(bgc_flags, bgc_enum, bgc_payload, bgc_raw, bgc_size, repr)
+)]
 pub fn payload_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let type_ident = input.ident;
@@ -110,29 +114,28 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
     .into()
 }
 
-fn get_primitive_type(ty: &Type) -> Option<&Ident> {
-    match ty {
-        Type::Path(path) => match path.path.get_ident() {
-            Some(ident) => {
-                if ident == "u8" || ident == "i8" {
-                    Some(ident)
-                } else if ident == "u16"
-                    || ident == "i16"
-                    || ident == "u32"
-                    || ident == "i32"
-                    || ident == "u64"
-                    || ident == "i64"
-                    || ident == "u128"
-                    || ident == "i128"
-                {
-                    Some(ident)
-                } else {
-                    None
-                }
+/// Returns true if ty is a primitive integer type
+/// usize and isize don't count, but u128 and i128 do
+fn get_primitive_int_kind(ty: &TypePath) -> Option<&Ident> {
+    match ty.path.get_ident() {
+        Some(ident) => {
+            if ident == "u8"
+                || ident == "i8"
+                || ident == "u16"
+                || ident == "i16"
+                || ident == "u32"
+                || ident == "i32"
+                || ident == "u64"
+                || ident == "i64"
+                || ident == "u128"
+                || ident == "i128"
+            {
+                Some(ident)
+            } else {
+                None
             }
-            None => None,
-        },
-        _ => None,
+        }
+        None => None,
     }
 }
 
@@ -156,14 +159,20 @@ fn get_stmt_for_field(idx: usize, field: &Field) -> Option<(Ident, Option<Ident>
             }
 
             spec_repr = Some(match attr.parse_args::<Type>() {
-                Ok(s) => match get_primitive_type(&s) {
-                    Some(s) => s.clone(),
-                    None => {
+                Ok(ty) => match ty {
+                    Type::Path(ty) => match get_primitive_int_kind(&ty) {
+                        Some(ty) => ty.clone(),
+                        _ => {
+                            emit_error!(attr, "invalid repr attribute");
+                            return None;
+                        }
+                    },
+                    _ => {
                         emit_error!(attr, "invalid repr attribute");
                         return None;
                     }
                 },
-                Err(_) => {
+                _ => {
                     emit_error!(attr, "invalid repr attribute");
                     return None;
                 }
@@ -185,7 +194,7 @@ fn get_stmt_for_field(idx: usize, field: &Field) -> Option<(Ident, Option<Ident>
                         emit_error!(attr, "invalid size attribute");
                         return None;
                     }
-                }
+                },
                 Err(_) => {
                     emit_error!(attr, "invalid size attribute");
                     return None;
@@ -263,35 +272,21 @@ fn get_stmt_for_field(idx: usize, field: &Field) -> Option<(Ident, Option<Ident>
                     let #variable_ident: #field_type = Payload::from_bytes(b.split_to(#spec_size))
                 },
             ))
-        },
-        FieldKind::Flags | FieldKind::Enum | FieldKind::Raw => {
-            let repr = match field_kind {
-                FieldKind::Flags | FieldKind::Enum =>
-                    match spec_repr {
-                        Some(r) => r.clone(),
-                        None => {
-                            emit_error!(field.ty, "repr must be specified for enum and flags values");
-                            return None;
-                        }
-                    },
-                FieldKind::Raw => match
-                get_primitive_type(&field.ty) {
-                    Some(r) => r.clone(),
-                    None => {
-                        emit_error!(field.ty, "field must be primitive type for raw values");
-                        return None;
-                    }
-                },
-                _ => unreachable!()
+        }
+        FieldKind::Flags | FieldKind::Enum => {
+            let repr = match spec_repr {
+                Some(r) => r,
+                None => {
+                    emit_error!(field.ty, "repr must be specified for enum and flags values");
+                    return None;
+                }
             };
 
-            let repr_endian = if repr == "u8" || repr == "i8" {
-                repr.clone()
+            let get_value = if repr == "u8" || repr == "i8" {
+                format_ident!("get_{}", repr)
             } else {
-                format_ident!("{}_le", repr.clone())
+                format_ident!("{}_le", repr)
             };
-
-            let get_value = format_ident!("get_{}", repr_endian);
 
             match field_kind {
                 FieldKind::Flags => Some((
@@ -313,15 +308,71 @@ fn get_stmt_for_field(idx: usize, field: &Field) -> Option<(Ident, Option<Ident>
                         },
                     ))
                 }
-                FieldKind::Raw => Some((
-                    variable_ident.clone(),
-                    field_ident,
-                    quote! {
-                        let #variable_ident = b.#get_value();
-                    },
-                )),
                 _ => unreachable!(),
             }
         }
+        FieldKind::Raw => match &field.ty {
+            Type::Path(ty) => match get_primitive_int_kind(ty) {
+                Some(repr) => {
+                    let get_value = if repr == "u8" || repr == "i8" {
+                        format_ident!("get_{}", repr)
+                    } else {
+                        format_ident!("get_{}_le", repr)
+                    };
+
+                    Some((
+                        variable_ident.clone(),
+                        field_ident,
+                        quote! {
+                            let #variable_ident = b.#get_value();
+                        },
+                    ))
+                }
+                None => {
+                    emit_error!(
+                        field.ty,
+                        "field must be primitive type or array of u8 for raw values"
+                    );
+                    return None;
+                }
+            },
+            Type::Array(ty) => match ty.elem.as_ref() {
+                Type::Path(elem_ty) => match elem_ty.path.get_ident() {
+                    Some(i) if i == "u8" => {
+                        let len = &ty.len;
+
+                        Some((
+                            variable_ident.clone(),
+                            field_ident,
+                            quote! {
+                                let mut #variable_ident = [0u8; #len];
+                                b.copy_to_slice(&mut #variable_ident[..]);
+                            },
+                        ))
+                    }
+                    _ => {
+                        emit_error!(
+                            field.ty,
+                            "field must be primitive type or array of u8 for raw values"
+                        );
+                        return None;
+                    }
+                },
+                _ => {
+                    emit_error!(
+                        field.ty,
+                        "field must be primitive type or array of u8 for raw values"
+                    );
+                    return None;
+                }
+            },
+            _ => {
+                emit_error!(
+                    field.ty,
+                    "field must be primitive type or array of u8 for raw values"
+                );
+                return None;
+            }
+        },
     }
 }
