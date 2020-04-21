@@ -102,36 +102,6 @@ pub enum AxisControlFlags {
     HighResSpeed = 1 << 7,
 }
 
-impl Payload for ControlMode {
-    fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
-    where
-        Self: Sized,
-    {
-        match b.remaining() {
-            1 => {
-                let m = read_enum!(b, "CONTROL_MODE", u8)?;
-                Ok(ControlMode::Legacy(m))
-            }
-            3 => {
-                let roll = read_enum!(b, "CONTROL_MODE[0]", u8)?;
-                let pitch = read_enum!(b, "CONTROL_MODE[1]", u8)?;
-                let yaw = read_enum!(b, "CONTROL_MODE[2]", u8)?;
-                Ok(ControlMode::Extended(roll, pitch, yaw))
-            }
-            _ => Err(PayloadParseError::InvalidEnum {
-                name: "CONTROL_MODE[]".into(),
-            }),
-        }
-    }
-
-    fn to_bytes(&self) -> Bytes
-    where
-        Self: Sized,
-    {
-        unimplemented!()
-    }
-}
-
 impl FromPrimitive for AxisControl {
     fn from_i64(n: i64) -> Option<Self> {
         Self::from_u8(n as u8)
@@ -140,7 +110,7 @@ impl FromPrimitive for AxisControl {
     fn from_u8(n: u8) -> Option<Self> {
         Some(AxisControl(
             FromPrimitive::from_u8(n)?,
-            BitFlags::from_bits_truncate(n ),
+            BitFlags::from_bits_truncate(n),
         ))
     }
 
@@ -207,11 +177,19 @@ impl Payload for ControlData {
         Self: Sized,
     {
         Ok(ControlData {
-            mode: Payload::from_bytes(b.split_to(if b.remaining() == 13 { 1 } else { 3 }))?,
+            mode: if b.remaining() == 13 {
+                ControlMode::Legacy(read_enum!(b, "CONTROL_MODE", u8)?)
+            } else {
+                ControlMode::Extended(
+                    read_enum!(b, "CONTROL_MODE[0]", u8)?,
+                    read_enum!(b, "CONTROL_MODE[1]", u8)?,
+                    read_enum!(b, "CONTROL_MODE[2]", u8)?,
+                )
+            },
             axes: (
-                Payload::from_bytes(b.split_to(2))?,
-                Payload::from_bytes(b.split_to(2))?,
-                Payload::from_bytes(b.split_to(2))?,
+                Payload::from_bytes(b.split_to(4))?,
+                Payload::from_bytes(b.split_to(4))?,
+                Payload::from_bytes(b.split_to(4))?,
             ),
         })
     }

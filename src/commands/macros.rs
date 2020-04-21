@@ -44,5 +44,5 @@ macro_rules! read_flags_truncate {
         m! {
             BitFlags::from_bits_truncate($buf."get"())
         }
-    }}
+    }};
 }
