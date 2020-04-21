@@ -33,3 +33,16 @@ macro_rules! read_flags {
         }
     }}
 }
+
+#[macro_export]
+macro_rules! read_flags_truncate {
+    ($buf: ident, $name: literal, $repr: ident) => {{
+        mashup! {
+            m["get"] = get_ $repr;
+        }
+
+        m! {
+            BitFlags::from_bits_truncate($buf."get"())
+        }
+    }}
+}

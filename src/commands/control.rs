@@ -140,7 +140,7 @@ impl FromPrimitive for AxisControl {
     fn from_u8(n: u8) -> Option<Self> {
         Some(AxisControl(
             FromPrimitive::from_u8(n)?,
-            BitFlags::from_bits(n).ok()?,
+            BitFlags::from_bits_truncate(n ),
         ))
     }
 

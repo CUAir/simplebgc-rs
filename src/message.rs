@@ -133,7 +133,7 @@ pub trait Message {
 
         let payload = Bytes::copy_from_slice(&buf[4..4 + payload_len]);
         let expected_payload_checksum = buf[4 + payload_len];
-        let payload_checksum = checksum_bgc(&payload[..]);
+        let payload_checksum = checksum_bgc_v1(&payload[..]);
 
         if expected_payload_checksum != payload_checksum {
             return Err(MessageParseError::BadPayloadChecksum {
@@ -172,7 +172,7 @@ pub trait Message {
         let payload = Bytes::copy_from_slice(&buf[4..4 + payload_len]);
 
         let expected_checksum = u16::from_le_bytes([buf[4 + payload_len], buf[5 + payload_len]]);
-        let checksum = checksum_bgc_crc(&buf[1..4 + payload_len]);
+        let checksum = checksum_bgc_v2(&buf[1..4 + payload_len]);
 
         if expected_checksum != checksum {
             return Err(MessageParseError::BadPayloadChecksum {
@@ -185,11 +185,11 @@ pub trait Message {
     }
 }
 
-fn checksum_bgc(buf: &[u8]) -> u8 {
+fn checksum_bgc_v1(buf: &[u8]) -> u8 {
     buf.iter().fold(0u8, |l, r| l.wrapping_add(*r))
 }
 
-fn checksum_bgc_crc(buf: &[u8]) -> u16 {
+fn checksum_bgc_v2(buf: &[u8]) -> u16 {
     const POLYNOM: u16 = 0x8005;
     let mut crc = 0;
     let mut data_bit = false;
