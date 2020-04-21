@@ -48,14 +48,14 @@ pub enum ConnectionFlag {
     USB = 1 << 0,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RollPitchYaw<T: Payload> {
     roll: T,
     pitch: T,
     yaw: T
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Payload, Copy, Clone, Debug, PartialEq)]
 pub struct AngleInfo {
     /// Imu angles in 14-bit resolution per full turn
     /// Units: 0,02197265625 degree
@@ -65,9 +65,9 @@ pub struct AngleInfo {
     target_angle: i32,
 }
 
-axes_payload!(AngleInfo, 4);
+// axes_payload!(AngleInfo, 4);
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum IncomingCommand {
     BoardInfo {
         board_version: Version,
@@ -77,12 +77,12 @@ pub enum IncomingCommand {
         frw_extra_id: u32,
         reserved: [u8; 7],
     },
-    GetAngles(RollPitchYaw<AngleInfo>),
+    GetAngles(AngleInfo),
     ReadParams(Params3Data),
     ReadParams3(Params3Data),
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum OutgoingCommand {
     BoardInfo,
     BoardInfo3,
