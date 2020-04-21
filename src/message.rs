@@ -1,6 +1,6 @@
 use crate::commands::constants::*;
 use crate::payload::*;
-use crate::{OutgoingCommand, Params3Data};
+use crate::{OutgoingCommand, IncomingCommand, Params3Data};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -273,6 +273,29 @@ impl Message for OutgoingCommand {
             },
             _ => Other { id },
         })
+    }
+}
+
+impl Message for IncomingCommand {
+    fn command_id(&self) -> u8 {
+        match self {
+            IncomingCommand::BoardInfo { .. } => CMD_BOARD_INFO,
+            IncomingCommand::GetAngles { .. } => CMD_GET_ANGLES,
+            IncomingCommand::ReadParams(_) => CMD_READ_PARAMS,
+            IncomingCommand::ReadParams3(_) => CMD_READ_PARAMS_3
+        }
+    }
+
+    fn to_payload_bytes(&self) -> Bytes {
+        use IncomingCommand::*;
+        unimplemented!();
+    }
+
+    fn from_payload_bytes(id: u8, bytes: Bytes) -> Result<Self, MessageParseError>
+    where
+        Self: Sized,
+    {
+        unimplemented!();
     }
 }
 

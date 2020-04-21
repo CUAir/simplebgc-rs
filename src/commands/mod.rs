@@ -61,15 +61,39 @@ pub enum IncomingCommand {
     GetAngles {
         /// Imu angles in 14-bit resolution per full turn
         /// Units: 0,02197265625 degree
-        imu_angle: i32,
+        roll_imu_angle: i32,
 
         /// Target angles in 14-bit resolution per full turn
         /// Units: 0,02197265625 degree
-        target_angle: i32,
+        roll_target_angle: i32,
 
         /// Target speed that gimbal should keep, over Euler axes
         /// Units: 0,1220740379 degree/sec
-        target_speed: i32,
+        roll_target_speed: i32,
+        
+        /// Imu angles in 14-bit resolution per full turn
+        /// Units: 0,02197265625 degree
+        pitch_imu_angle: i32,
+
+        /// Target angles in 14-bit resolution per full turn
+        /// Units: 0,02197265625 degree
+        pitch_target_angle: i32,
+
+        /// Target speed that gimbal should keep, over Euler axes
+        /// Units: 0,1220740379 degree/sec
+        pitch_target_speed: i32,
+
+        /// Imu angles in 14-bit resolution per full turn
+        /// Units: 0,02197265625 degree
+        yaw_imu_angle: i32,
+
+        /// Target angles in 14-bit resolution per full turn
+        /// Units: 0,02197265625 degree
+        yaw_target_angle: i32,
+
+        /// Target speed that gimbal should keep, over Euler axes
+        /// Units: 0,1220740379 degree/sec
+        yaw_target_speed: i32,
     },
     ReadParams(Params3Data),
     ReadParams3(Params3Data),
