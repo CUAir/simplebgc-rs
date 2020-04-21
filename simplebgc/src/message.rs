@@ -1,6 +1,6 @@
 use crate::commands::constants::*;
 use crate::payload::*;
-use crate::{OutgoingCommand, IncomingCommand};
+use crate::{IncomingCommand, OutgoingCommand};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
@@ -281,7 +281,7 @@ impl Message for IncomingCommand {
             IncomingCommand::BoardInfo { .. } => CMD_BOARD_INFO,
             IncomingCommand::GetAngles { .. } => CMD_GET_ANGLES,
             IncomingCommand::ReadParams(_) => CMD_READ_PARAMS,
-            IncomingCommand::ReadParams3(_) => CMD_READ_PARAMS_3
+            IncomingCommand::ReadParams3(_) => CMD_READ_PARAMS_3,
         }
     }
 

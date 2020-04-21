@@ -10,9 +10,9 @@ pub use self::control::*;
 pub use self::motors_off::*;
 pub use self::read_params_3::*;
 
-use bytes::{BufMut, Bytes, BytesMut};
-use enumflags2::BitFlags;
 use crate::{Payload, PayloadParseError};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use enumflags2::BitFlags;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Version {
@@ -52,18 +52,22 @@ pub enum ConnectionFlag {
 pub struct RollPitchYaw<T: Payload> {
     roll: T,
     pitch: T,
-    yaw: T
+    yaw: T,
 }
 
-#[derive(Payload, Copy, Clone, Debug, PartialEq)]
+#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct AngleInfo {
     /// Imu angles in 14-bit resolution per full turn
     /// Units: 0,02197265625 degree
+    #[bgc_raw("IMU_ANGLE")]
     imu_angle: i32,
+
     /// Target angles in 14-bit resolution per full turn
     /// Units: 0,02197265625 degree
+    #[bgc_raw("TARGET_ANGLE")]
     target_angle: i32,
 }
+
 
 // axes_payload!(AngleInfo, 4);
 

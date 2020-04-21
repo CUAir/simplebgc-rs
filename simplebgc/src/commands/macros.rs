@@ -47,8 +47,10 @@ macro_rules! read_flags_truncate {
 macro_rules! axes_payload {
     ($type: ty, $size: literal) => {
         impl Payload for RollPitchYaw<$type> {
-            fn from_bytes(b: Bytes) -> Result<Self, PayloadParseError> where
-                Self: Sized {
+            fn from_bytes(b: Bytes) -> Result<Self, PayloadParseError>
+            where
+                Self: Sized,
+            {
                 Ok(RollPitchYaw {
                     roll: Payload::from_bytes(b.split_to($size))?,
                     pitch: Payload::from_bytes(b.split_to($size))?,
@@ -56,8 +58,10 @@ macro_rules! axes_payload {
                 })
             }
 
-            fn to_bytes(&self) -> Bytes where
-                Self: Sized {
+            fn to_bytes(&self) -> Bytes
+            where
+                Self: Sized,
+            {
                 let mut b = BytesMut::with_capacity($size * 3);
                 b.put(Payload::to_bytes(self.roll));
                 b.put(Payload::to_bytes(self.pitch));
@@ -67,4 +71,3 @@ macro_rules! axes_payload {
         }
     };
 }
-
