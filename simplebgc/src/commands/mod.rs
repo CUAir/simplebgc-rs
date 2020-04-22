@@ -44,6 +44,15 @@ roll_pitch_yaw!(AngleInfo, 4);
 pub enum IncomingCommand {
     BoardInfo(BoardInfo),
     GetAngles(AngleInfo),
+    BoardInfo {
+        board_version: Version,
+        firmware_version: Version,
+        state: StateFlags1,
+        connection_flag: ConnectionFlag,
+        frw_extra_id: u32,
+        reserved: [u8; 7],
+    },
+    GetAngles(RollPitchYaw<AngleInfo>),
     ReadParams(Params3Data),
     ReadParams3(Params3Data),
 }
