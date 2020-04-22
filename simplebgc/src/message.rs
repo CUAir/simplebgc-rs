@@ -289,9 +289,9 @@ impl Message for IncomingCommand {
         use IncomingCommand::*;
         match self {
             BoardInfo(info) => Payload::to_bytes(info),
-            GetAngles(angles) => angles.to_bytes(),
-            ReadParams(params) => params.to_bytes(),
-            ReadParams3(params) => params.to_bytes(),
+            GetAngles(angles) => Payload::to_bytes(angles),
+            ReadParams(params) => Payload::to_bytes(params),
+            ReadParams3(params) => Payload::to_bytes(params),
         }
     }
 
