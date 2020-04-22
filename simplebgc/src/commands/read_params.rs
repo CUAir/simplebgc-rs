@@ -3,56 +3,49 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
 
-// TODO: derive(BgcPayload)
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct AxisParams {
-    pid: (u8, u8, u8),
+#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
+pub struct AxisPidParams {
+    #[bgc_raw]
+    p: u8,
+    #[bgc_raw]
+    i: u8,
+    #[bgc_raw]
+    d: u8,
+    #[bgc_raw]
     power: u8,
+    #[bgc_raw]
+    #[bgc_repr(u8)]
     invert: bool,
+    #[bgc_raw]
     poles: u8,
+}
 
+roll_pitch_yaw!(AxisPidParams, 6);
+
+#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
+pub struct AxisRcParams {
     /// Units: degrees
+    #[bgc_raw]
     rc_min_angle: i16,
     /// Units: degrees
+    #[bgc_raw]
     rc_max_angle: i16,
-    rc_mode: AxisRcMode,
+    #[bgc_flags]
+    #[bgc_repr(u8)]
+    rc_mode: BitFlags<AxisRcMode>,
+    #[bgc_raw]
     rc_lpf: u8,
+    #[bgc_raw]
     rc_speed: u8,
 
     /// ROLL, PITCH: this value specify follow rate for
     /// flight controller. YAW: if value != 0, “follow motor”
     /// mode is enabled.
+    #[bgc_raw]
     rc_follow: i8,
-    rc_trim: i8,
-    follow_offset: i8,
-
-    /// Additional power to correct lost synchronization
-    booster_power: u8,
-    follow_speed: u8,
-
-    /// Initial angle that is set at system start-up, in 14bit resolution
-    /// Units: 0,02197265625 degree
-    rc_memory: i16,
-    follow_lpf: u8,
 }
 
-// TODO: roll_pitch_yaw!(AxisParams, ?);
-
-impl Payload for AxisParams {
-    fn from_bytes(b: Bytes) -> Result<Self, PayloadParseError>
-    where
-        Self: Sized,
-    {
-        unimplemented!()
-    }
-
-    fn to_bytes(&self) -> Bytes
-    where
-        Self: Sized,
-    {
-        unimplemented!()
-    }
-}
+roll_pitch_yaw!(AxisRcParams, 8);
 
 #[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
@@ -74,17 +67,17 @@ pub enum PwmFrequency {
 #[repr(u8)]
 pub enum SerialSpeed {
     /// 115200
-    Level0,
+    B115200 = 0,
     /// 57600
-    Level1,
+    B57600,
     /// 38400
-    Level2,
+    B38400,
     /// 19200
-    Level3,
+    B19200,
     /// 9600
-    Level4,
+    B9600,
     /// 256000
-    Level5,
+    B25600,
 }
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
@@ -169,20 +162,30 @@ pub enum RcMixChannel {
     Yaw,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct RcMix(RcMixRate, RcMixChannel);
+#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
+pub struct RcMix(
+    #[bgc_enum("")]
+    #[bgc_repr(u8)]
+    RcMixRate,
+    #[bgc_enum("")]
+    #[bgc_repr(u8)]
+    RcMixChannel,
+);
 
 impl FromPrimitive for RcMix {
     fn from_i64(n: i64) -> Option<Self> {
-        FromPrimitive::from_u64(n as u64)
+        FromPrimitive::from_u8(n as u8)
     }
 
-    fn from_u64(b: u64) -> Option<Self> {
-        let b = b as u8;
+    fn from_u8(b: u8) -> Option<Self> {
         Some(RcMix(
             FromPrimitive::from_u8(b & 0b111111)?,
             FromPrimitive::from_u8(b >> 5)?,
         ))
+    }
+
+    fn from_u64(b: u64) -> Option<Self> {
+        FromPrimitive::from_u8(b as u8)
     }
 }
 
@@ -392,269 +395,236 @@ pub enum ImuType {
     Frame,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct RcMixes {
+    #[bgc_payload("RC_MIX_FC_ROLL")]
+    #[bgc_size(2)]
     fc_roll: RcMix,
+
+    #[bgc_payload("RC_MIX_FC_PITCH")]
+    #[bgc_size(2)]
     fc_pitch: RcMix,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct RcMaps {
+    #[bgc_enum("RC_MAP_ROLL")]
+    #[bgc_repr(u8)]
     roll: RcMap,
+
+    #[bgc_enum("RC_MAP_PITCH")]
+    #[bgc_repr(u8)]
     pitch: RcMap,
+
+    #[bgc_enum("RC_MAP_YAW")]
+    #[bgc_repr(u8)]
     yaw: RcMap,
+
+    #[bgc_enum("RC_MAP_CMD")]
+    #[bgc_repr(u8)]
     cmd: RcMap,
+
+    #[bgc_enum("RC_MAP_FC_ROLL")]
+    #[bgc_repr(u8)]
     fc_roll: RcMap,
+
+    #[bgc_enum("RC_MAP_FC_PITCH")]
+    #[bgc_repr(u8)]
     fc_pitch: RcMap,
 }
 
-// TODO: derive(BgcPayload)
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(BgcPayload, Clone, Debug, PartialEq)]
 pub struct Params3Data {
     /// profile ID to read or write. To access current (active) profile,
     /// specify 255. Possible values: 0..4
+    #[bgc_raw("PROFILE_ID")]
     profile_id: u8,
-    axes: (AxisParams, AxisParams, AxisParams),
+
+    #[bgc_payload]
+    #[bgc_size(18)]
+    pid: RollPitchYaw<AxisPidParams>,
+
     /// Units: 5 degrees/sec^2 0 – disabled.
     /// (starting from ver. 2.60 is deprecated; replaced by the ACC_LIMITER3)
+    #[bgc_raw]
     acc_limiter_all: u8,
-    ext_fc_gain: [i8; 2],
+
+    #[bgc_raw]
+    ext_fc_gain: (i8, i8),
+
+    #[bgc_payload]
+    #[bgc_size(24)]
+    rc: RollPitchYaw<AxisRcParams>,
+
+    #[bgc_raw]
     gyro_trust: u8,
+
+    #[bgc_raw]
+    #[bgc_repr(u8)]
     use_model: bool,
+
+    #[bgc_enum]
+    #[bgc_repr(u8)]
     pwm_freq: PwmFrequency,
+
+    #[bgc_enum]
+    #[bgc_repr(u8)]
     serial_speed: SerialSpeed,
+
+    #[bgc_payload]
+    #[bgc_size(3)]
+    rc_trim: RollPitchYaw<i8>,
+
+    #[bgc_raw]
     rc_deadband: u8,
+
+    #[bgc_raw]
     rc_expo_rate: u8,
+
+    #[bgc_enum]
+    #[bgc_repr(u8)]
     rc_virt_mode: RcVirtMode,
+
+    #[bgc_payload]
+    #[bgc_size(6)]
     rc_map: RcMaps,
+
+    #[bgc_payload]
+    #[bgc_size(2)]
     rc_mix: RcMixes,
+
+    #[bgc_enum]
+    #[bgc_repr(u8)]
     follow_mode: FollowMode,
+
+    #[bgc_raw]
     follow_deadband: u8,
+
+    #[bgc_raw]
     follow_expo_rate: u8,
+
+    #[bgc_enum]
+    #[bgc_repr(i8)]
     axis_top: Orientation,
+
+    #[bgc_enum]
+    #[bgc_repr(i8)]
     axis_right: Orientation,
+
+    #[bgc_enum]
+    #[bgc_repr(i8)]
     frame_axis_top: Orientation,
+
+    #[bgc_enum]
+    #[bgc_repr(i8)]
     frame_axis_right: Orientation,
+
+    #[bgc_enum]
+    #[bgc_repr(u8)]
     frame_imu_pos: FrameImuPos,
+
+    #[bgc_raw]
     gyro_deadband: u8,
+
+    #[bgc_raw]
     gyro_sens: u8,
+
+    #[bgc_raw]
+    #[bgc_repr(u8)]
     i2c_speed_fast: bool,
+
+    #[bgc_enum]
+    #[bgc_repr(u8)]
     skip_gyro_calib: GyroCalibrationMode,
+
+    #[bgc_raw]
+    rc_cmd: [u8; 9], // TODO: implement RC_CMD_LOW .. MENU_CMD_LONG, probably as a couple of structs
+
+    #[bgc_payload]
+    #[bgc_size(3)]
+    motor_output: RollPitchYaw<u8>,
+
     /// Negative means means alarm is disabled.
+    #[bgc_raw]
     bat_threshold_alarm: i16,
     /// Negative value means function is disabled.
+    #[bgc_raw]
     bat_threshold_motors: i16,
     /// Negative value means compensation is disabled.
+    #[bgc_raw]
     bat_comp_ref: i16,
+    #[bgc_enum]
+    #[bgc_repr(u8)]
     beeper_mode: BeeperMode,
+    #[bgc_raw]
+    #[bgc_repr(u8)]
     follow_roll_mix_start: u8,
+    #[bgc_raw]
+    #[bgc_repr(u8)]
     follow_roll_mix_range: u8,
+
+    #[bgc_payload]
+    #[bgc_size(3)]
+    booster_power: RollPitchYaw<u8>,
+
+    #[bgc_payload]
+    #[bgc_size(3)]
+    follow_speed: RollPitchYaw<u8>,
+
+    #[bgc_raw]
+    #[bgc_repr(u8)]
     frame_angle_from_motors: bool,
     /// Disabled = 0
     /// 1..32 - Virtual channel number as source of data to be output
+    #[bgc_raw]
     servo_out: [u8; 4],
     /// PWM frequency, 10 Hz per unit.
+    #[bgc_raw]
     servo_rate: u8,
+
+    #[bgc_flags]
+    #[bgc_repr(u8)]
     adaptive_pid_enabled: BitFlags<AdaptivePid>,
+
+    #[bgc_raw]
     adaptive_pid_threshold: u8,
+
+    #[bgc_raw]
     adaptive_pid_rate: u8,
+
+    #[bgc_raw]
     adaptive_pid_recovery_factor: u8,
+
+    #[bgc_flags]
+    #[bgc_repr(u16)]
     general_flags: BitFlags<GeneralFlags>,
+
+    #[bgc_flags]
+    #[bgc_repr(u16)]
     profile_flags: BitFlags<ProfileFlags>,
+
+    #[bgc_enum]
+    #[bgc_repr(u8)]
     spektrum_mode: SpektrumMode,
+
     /// Order of hardware axes, counting from a camera. Implemented in
     /// special builds of firmware only.
+    #[bgc_enum]
+    #[bgc_repr(u8)]
     order_of_axes: AxisOrder,
+
     /// Order of Euler angles to represent the current orientation of a
     /// camera and the target of stabilization
+    #[bgc_enum]
+    #[bgc_repr(u8)]
     euler_order: EulerOrder,
+
     /// currently selected IMU
+    #[bgc_enum]
+    #[bgc_repr(u8)]
     cur_imu: ImuType,
+
     /// profile ID which is currently active in the controller, 0...4
+    #[bgc_raw]
     cur_profile_id: u8,
-}
-
-impl Payload for Params3Data {
-    fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError> {
-        let profile_id = b.get_u8();
-
-        // start w/ PID data
-        let mut axis_data = [
-            BytesMut::with_capacity(15),
-            BytesMut::with_capacity(15),
-            BytesMut::with_capacity(15),
-        ];
-
-        for axis_buf in axis_data.iter_mut() {
-            let mut tmp = Vec::with_capacity(6);
-            b.copy_to_slice(&mut tmp[..]);
-            axis_buf.put(&tmp[..]); // P..POLES
-        }
-
-        let acc_limiter_all = b.get_u8();
-        let ext_fc_gain = [b.get_i8(), b.get_i8()];
-
-        for axis_buf in axis_data.iter_mut() {
-            let mut tmp = Vec::with_capacity(8);
-            b.copy_to_slice(&mut tmp[..]);
-            axis_buf.put(&tmp[..]); // RC_MIN_ANGLE..RC_FOLLOW
-        }
-
-        let gyro_trust = b.get_u8();
-        let use_model = b.get_u8() != 0;
-        let pwm_freq: PwmFrequency = read_enum!(b, "PWM_FREQUENCY", u8)?;
-        let serial_speed: SerialSpeed = read_enum!(b, "SERIAL_SPEED", u8)?;
-
-        for axis_buf in axis_data.iter_mut() {
-            axis_buf.put_i8(b.get_i8()); // RC_TRIM
-        }
-
-        let rc_deadband = b.get_u8();
-        let rc_expo_rate = b.get_u8();
-        let rc_virt_mode: RcVirtMode = read_enum!(b, "RC_VIRT_MODE", u8)?;
-
-        let rc_map = RcMaps {
-            roll: read_enum!(b, "RC_MAP_ROLL", u8)?,
-            pitch: read_enum!(b, "RC_MAP_PITCH", u8)?,
-            yaw: read_enum!(b, "RC_MAP_YAW", u8)?,
-            cmd: read_enum!(b, "RC_MAP_CMD", u8)?,
-            fc_roll: read_enum!(b, "RC_MAP_FC_ROLL", u8)?,
-            fc_pitch: read_enum!(b, "RC_MAP_FC_PITCH", u8)?,
-        };
-
-        let rc_mix = RcMixes {
-            fc_roll: read_enum!(b, "RC_MIX_FC_ROLL", u8)?,
-            fc_pitch: read_enum!(b, "RC_MIX_FC_PITCH", u8)?,
-        };
-
-        let follow_mode: FollowMode = read_enum!(b, "FOLLOW_MODE", u8)?;
-        let follow_deadband = b.get_u8();
-        let follow_expo_rate = b.get_u8();
-
-        for axis_buf in axis_data.iter_mut() {
-            axis_buf.put_i8(b.get_i8()); // FOLLOW_OFFSET
-        }
-
-        let axis_top: Orientation = read_enum!(b, "AXIS_TOP", i8)?;
-        let axis_right: Orientation = read_enum!(b, "AXIS_RIGHT", i8)?;
-        let frame_axis_top: Orientation = read_enum!(b, "FRAME_AXIS_TOP", i8)?;
-        let frame_axis_right: Orientation = read_enum!(b, "FRAME_AXIS_RIGHT", i8)?;
-
-        let frame_imu_pos: FrameImuPos = read_enum!(b, "FRAME_IMU_POS", u8)?;
-        let gyro_deadband = b.get_u8();
-        let gyro_sens = b.get_u8();
-        let i2c_speed_fast = b.get_u8() != 0;
-        let skip_gyro_calib: GyroCalibrationMode = read_enum!(b, "SKIP_GYRO_CALIB", u8)?;
-
-        // RC_CMD_LOW..MENU_CMD_LONG
-        b.advance(9);
-
-        for axis_buf in axis_data.iter_mut() {
-            axis_buf.put_u8(b.get_u8()); // MOTOR_OUTPUT
-        }
-
-        let bat_threshold_alarm = b.get_i16_le();
-        let bat_threshold_motors = b.get_i16_le();
-        let bat_comp_ref = b.get_i16_le();
-        let beeper_mode: BeeperMode = read_enum!(b, "BEEPER_MODE", u8)?;
-
-        let follow_roll_mix_start = b.get_u8();
-        let follow_roll_mix_range = b.get_u8();
-
-        for axis_buf in axis_data.iter_mut() {
-            axis_buf.put_u8(b.get_u8()); // BOOSTER_POWER
-        }
-
-        for axis_buf in axis_data.iter_mut() {
-            axis_buf.put_u8(b.get_u8()); // FOLLOW_SPEED
-        }
-
-        let frame_angle_from_motors = b.get_u8() != 0;
-
-        for axis_buf in axis_data.iter_mut() {
-            axis_buf.put_i16_le(b.get_i16_le()); // RC_MEMORY
-        }
-
-        let servo_out = [b.get_u8(), b.get_u8(), b.get_u8(), b.get_u8()];
-        let servo_rate = b.get_u8();
-        let adaptive_pid_enabled: BitFlags<AdaptivePid> =
-            read_flags!(b, "ADAPTIVE_PID_ENABLED", u8)?;
-        let adaptive_pid_threshold = b.get_u8();
-        let adaptive_pid_rate = b.get_u8();
-        let adaptive_pid_recovery_factor = b.get_u8();
-        let follow_lpf = [b.get_u8(), b.get_u8(), b.get_u8()];
-
-        let general_flags: BitFlags<GeneralFlags> = read_flags!(b, "ADAPTIVE_PID_ENABLED", u16_le)?;
-        let profile_flags: BitFlags<ProfileFlags> = read_flags!(b, "ADAPTIVE_PID_ENABLED", u16_le)?;
-
-        let spektrum_mode: SpektrumMode = read_enum!(b, "SPEKTRUM_MODE", u8)?;
-
-        let order_of_axes: AxisOrder = read_enum!(b, "ORDER_OF_AXES", u8)?;
-        let euler_order: EulerOrder = read_enum!(b, "EULER_ORDER", u8)?;
-
-        let cur_imu: ImuType = read_enum!(b, "CUR_IMU", u8)?;
-        let cur_profile_id = b.get_u8();
-
-        let [mut axis_data_roll, mut axis_data_yaw, mut axis_data_pitch] = axis_data;
-
-        Ok(Params3Data {
-            profile_id,
-            axes: (
-                AxisParams::from_bytes(axis_data_roll.freeze())?,
-                AxisParams::from_bytes(axis_data_yaw.freeze())?,
-                AxisParams::from_bytes(axis_data_pitch.freeze())?,
-            ),
-            acc_limiter_all,
-            ext_fc_gain,
-            gyro_trust,
-            use_model,
-            pwm_freq,
-            serial_speed,
-            rc_deadband,
-            rc_expo_rate,
-            rc_virt_mode,
-            rc_map,
-            rc_mix,
-            follow_mode,
-            follow_deadband,
-            follow_expo_rate,
-            axis_top,
-            axis_right,
-            frame_axis_top,
-            frame_axis_right,
-            frame_imu_pos,
-            gyro_deadband,
-            gyro_sens,
-            i2c_speed_fast,
-            skip_gyro_calib,
-            // TODO: RC_CMD_LOW..MENU_CMD_LONG
-            bat_threshold_alarm,
-            bat_threshold_motors,
-            bat_comp_ref,
-            beeper_mode,
-            follow_roll_mix_start,
-            follow_roll_mix_range,
-            frame_angle_from_motors,
-            servo_out,
-            servo_rate,
-            adaptive_pid_enabled,
-            adaptive_pid_threshold,
-            adaptive_pid_rate,
-            adaptive_pid_recovery_factor,
-            general_flags,
-            profile_flags,
-            spektrum_mode,
-            order_of_axes,
-            euler_order,
-            cur_imu,
-            cur_profile_id,
-        })
-    }
-
-    fn to_bytes(&self) -> Bytes
-    where
-        Self: Sized,
-    {
-        unimplemented!()
-    }
 }

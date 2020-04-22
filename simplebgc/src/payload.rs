@@ -1,4 +1,4 @@
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
@@ -31,4 +31,36 @@ pub trait Payload {
     fn to_bytes(&self) -> Bytes
     where
         Self: Sized;
+}
+
+impl Payload for u8 {
+    fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
+    where
+        Self: Sized,
+    {
+        Ok(b.get_u8())
+    }
+
+    fn to_bytes(&self) -> Bytes
+    where
+        Self: Sized,
+    {
+        Bytes::copy_from_slice(&[*self])
+    }
+}
+
+impl Payload for i8 {
+    fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
+    where
+        Self: Sized,
+    {
+        Ok(b.get_i8())
+    }
+
+    fn to_bytes(&self) -> Bytes
+    where
+        Self: Sized,
+    {
+        Bytes::copy_from_slice(&[*self as u8])
+    }
 }

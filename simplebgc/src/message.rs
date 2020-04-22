@@ -191,14 +191,12 @@ fn checksum_bgc_v1(buf: &[u8]) -> u8 {
 fn checksum_bgc_v2(buf: &[u8]) -> u16 {
     const POLYNOM: u16 = 0x8005;
     let mut crc = 0;
-    let mut data_bit = false;
-    let mut crc_bit = false;
 
     for &byte in buf.iter() {
         let mut shift_register = 1;
         while shift_register > 0 {
-            data_bit = byte & shift_register != 0;
-            crc_bit = (crc >> 15) != 0;
+            let data_bit = byte & shift_register != 0;
+            let crc_bit = (crc >> 15) != 0;
             crc <<= 1;
 
             if data_bit != crc_bit {

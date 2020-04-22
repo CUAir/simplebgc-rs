@@ -5,12 +5,12 @@ pub(crate) mod constants;
 mod board_info;
 mod control;
 mod motors_off;
-mod read_params_3;
+mod read_params;
 
 pub use self::board_info::*;
 pub use self::control::*;
 pub use self::motors_off::*;
-pub use self::read_params_3::*;
+pub use self::read_params::*;
 
 use crate::{Payload, PayloadParseError};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
@@ -24,6 +24,9 @@ pub struct RollPitchYaw<T: Payload> {
 }
 
 impl<T: Payload + Copy> Copy for RollPitchYaw<T> {}
+
+roll_pitch_yaw!(u8, 1);
+roll_pitch_yaw!(i8, 1);
 
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct AngleInfo {
