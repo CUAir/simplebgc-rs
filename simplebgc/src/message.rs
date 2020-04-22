@@ -278,8 +278,8 @@ impl Message for OutgoingCommand {
 impl Message for IncomingCommand {
     fn command_id(&self) -> u8 {
         match self {
-            IncomingCommand::BoardInfo { .. } => CMD_BOARD_INFO,
-            IncomingCommand::GetAngles { .. } => CMD_GET_ANGLES,
+            IncomingCommand::BoardInfo(_) => CMD_BOARD_INFO,
+            IncomingCommand::GetAngles(_) => CMD_GET_ANGLES,
             IncomingCommand::ReadParams(_) => CMD_READ_PARAMS,
             IncomingCommand::ReadParams3(_) => CMD_READ_PARAMS_3,
         }
@@ -288,7 +288,7 @@ impl Message for IncomingCommand {
     fn to_payload_bytes(&self) -> Bytes {
         use IncomingCommand::*;
         match self {
-            BoardInfo { .. } => Bytes::default(), // TODO deal with later
+            BoardInfo(info) => Payload::to_bytes(info),
             GetAngles(angles) => angles.to_bytes(),
             ReadParams(params) => params.to_bytes(),
             ReadParams3(params) => params.to_bytes(),

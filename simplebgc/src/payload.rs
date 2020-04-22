@@ -22,10 +22,12 @@ impl Display for PayloadParseError {
 impl Error for PayloadParseError {}
 
 pub trait Payload {
+    /// Parses this payload from bytes according to the SimpleBGC spec.
     fn from_bytes(b: Bytes) -> Result<Self, PayloadParseError>
     where
         Self: Sized;
 
+    /// Converts this payload to bytes according to the SimpleBGC spec.
     fn to_bytes(&self) -> Bytes
     where
         Self: Sized;
