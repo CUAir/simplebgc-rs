@@ -12,7 +12,7 @@ pub enum ControlMode {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct AxisControl(AxisControlMode, BitFlags<AxisControlFlags>);
+pub struct AxisControl(pub AxisControlMode, pub BitFlags<AxisControlFlags>);
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]

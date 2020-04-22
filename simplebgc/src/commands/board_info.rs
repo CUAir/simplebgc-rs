@@ -41,17 +41,17 @@ pub struct BoardInfo {
     #[bgc_repr(u8)]
     state: BitFlags<StateFlags1>,
 
-    #[bgc_flags("BOARD_FEATURES")]
+    #[bgc_flags]
     #[bgc_repr(u16)]
     board_features: BitFlags<BoardFeatures>,
 
-    #[bgc_flags("CONNECTION_FLAG")]
+    #[bgc_flags]
     #[bgc_repr(u8)]
     connection_flag: BitFlags<ConnectionFlag>,
 
-    #[bgc_raw("FRW_EXTRA_ID")]
+    #[bgc_raw]
     frw_extra_id: u32,
 
-    #[bgc_raw("RESERVED")]
+    #[bgc_raw]
     reserved: [u8; 7],
 }

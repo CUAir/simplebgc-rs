@@ -6,18 +6,18 @@ use num_traits::FromPrimitive;
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct AxisPidParams {
     #[bgc_raw]
-    p: u8,
+    pub p: u8,
     #[bgc_raw]
-    i: u8,
+    pub i: u8,
     #[bgc_raw]
-    d: u8,
+    pub d: u8,
     #[bgc_raw]
-    power: u8,
+    pub power: u8,
     #[bgc_raw]
     #[bgc_repr(u8)]
-    invert: bool,
+    pub invert: bool,
     #[bgc_raw]
-    poles: u8,
+    pub poles: u8,
 }
 
 roll_pitch_yaw!(AxisPidParams, 6);
@@ -26,23 +26,23 @@ roll_pitch_yaw!(AxisPidParams, 6);
 pub struct AxisRcParams {
     /// Units: degrees
     #[bgc_raw]
-    rc_min_angle: i16,
+    pub rc_min_angle: i16,
     /// Units: degrees
     #[bgc_raw]
-    rc_max_angle: i16,
+    pub rc_max_angle: i16,
     #[bgc_flags]
     #[bgc_repr(u8)]
-    rc_mode: BitFlags<AxisRcMode>,
+    pub rc_mode: BitFlags<AxisRcMode>,
     #[bgc_raw]
-    rc_lpf: u8,
+    pub rc_lpf: u8,
     #[bgc_raw]
-    rc_speed: u8,
+    pub rc_speed: u8,
 
     /// ROLL, PITCH: this value specify follow rate for
     /// flight controller. YAW: if value != 0, “follow motor”
     /// mode is enabled.
     #[bgc_raw]
-    rc_follow: i8,
+    pub rc_follow: i8,
 }
 
 roll_pitch_yaw!(AxisRcParams, 8);
@@ -243,7 +243,7 @@ pub enum MotorOutput {
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-enum BeeperMode {
+pub enum BeeperMode {
     Calibrate = 1,
     Confirm = 2,
     Error = 4,
@@ -399,38 +399,44 @@ pub enum ImuType {
 pub struct RcMixes {
     #[bgc_payload("RC_MIX_FC_ROLL")]
     #[bgc_size(2)]
-    fc_roll: RcMix,
+    pub fc_roll: RcMix,
 
     #[bgc_payload("RC_MIX_FC_PITCH")]
     #[bgc_size(2)]
-    fc_pitch: RcMix,
+    pub fc_pitch: RcMix,
 }
 
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct RcMaps {
     #[bgc_enum("RC_MAP_ROLL")]
     #[bgc_repr(u8)]
-    roll: RcMap,
+    pub roll: RcMap,
 
     #[bgc_enum("RC_MAP_PITCH")]
     #[bgc_repr(u8)]
-    pitch: RcMap,
+    pub pitch: RcMap,
 
     #[bgc_enum("RC_MAP_YAW")]
     #[bgc_repr(u8)]
-    yaw: RcMap,
+    pub yaw: RcMap,
 
     #[bgc_enum("RC_MAP_CMD")]
     #[bgc_repr(u8)]
-    cmd: RcMap,
+    pub cmd: RcMap,
 
     #[bgc_enum("RC_MAP_FC_ROLL")]
     #[bgc_repr(u8)]
-    fc_roll: RcMap,
+    pub fc_roll: RcMap,
 
     #[bgc_enum("RC_MAP_FC_PITCH")]
     #[bgc_repr(u8)]
-    fc_pitch: RcMap,
+    pub fc_pitch: RcMap,
+}
+
+#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
+pub struct ParamsQuery {
+    #[bgc_raw]
+    pub profile_id: u8,
 }
 
 #[derive(BgcPayload, Clone, Debug, PartialEq)]
@@ -438,193 +444,195 @@ pub struct Params3Data {
     /// profile ID to read or write. To access current (active) profile,
     /// specify 255. Possible values: 0..4
     #[bgc_raw("PROFILE_ID")]
-    profile_id: u8,
+    pub profile_id: u8,
 
     #[bgc_payload]
     #[bgc_size(18)]
-    pid: RollPitchYaw<AxisPidParams>,
+    pub pid: RollPitchYaw<AxisPidParams>,
 
     /// Units: 5 degrees/sec^2 0 – disabled.
     /// (starting from ver. 2.60 is deprecated; replaced by the ACC_LIMITER3)
     #[bgc_raw]
-    acc_limiter_all: u8,
+    pub acc_limiter_all: u8,
 
     #[bgc_raw]
-    ext_fc_gain: (i8, i8),
+    pub ext_fc_gain: (i8, i8),
 
     #[bgc_payload]
     #[bgc_size(24)]
-    rc: RollPitchYaw<AxisRcParams>,
+    pub rc: RollPitchYaw<AxisRcParams>,
 
     #[bgc_raw]
-    gyro_trust: u8,
+    pub gyro_trust: u8,
 
     #[bgc_raw]
     #[bgc_repr(u8)]
-    use_model: bool,
+    pub use_model: bool,
 
     #[bgc_enum]
     #[bgc_repr(u8)]
-    pwm_freq: PwmFrequency,
+    pub pwm_freq: PwmFrequency,
 
     #[bgc_enum]
     #[bgc_repr(u8)]
-    serial_speed: SerialSpeed,
+    pub serial_speed: SerialSpeed,
 
     #[bgc_payload]
     #[bgc_size(3)]
-    rc_trim: RollPitchYaw<i8>,
+    pub rc_trim: RollPitchYaw<i8>,
 
     #[bgc_raw]
-    rc_deadband: u8,
+    pub rc_deadband: u8,
 
     #[bgc_raw]
-    rc_expo_rate: u8,
+    pub rc_expo_rate: u8,
 
     #[bgc_enum]
     #[bgc_repr(u8)]
-    rc_virt_mode: RcVirtMode,
+    pub rc_virt_mode: RcVirtMode,
 
     #[bgc_payload]
     #[bgc_size(6)]
-    rc_map: RcMaps,
+    pub rc_map: RcMaps,
 
     #[bgc_payload]
     #[bgc_size(2)]
-    rc_mix: RcMixes,
+    pub rc_mix: RcMixes,
 
     #[bgc_enum]
     #[bgc_repr(u8)]
-    follow_mode: FollowMode,
+    pub follow_mode: FollowMode,
 
     #[bgc_raw]
-    follow_deadband: u8,
+    pub follow_deadband: u8,
 
     #[bgc_raw]
-    follow_expo_rate: u8,
+    pub follow_expo_rate: u8,
 
     #[bgc_enum]
     #[bgc_repr(i8)]
-    axis_top: Orientation,
+    pub axis_top: Orientation,
 
     #[bgc_enum]
     #[bgc_repr(i8)]
-    axis_right: Orientation,
+    pub axis_right: Orientation,
 
     #[bgc_enum]
     #[bgc_repr(i8)]
-    frame_axis_top: Orientation,
+    pub frame_axis_top: Orientation,
 
     #[bgc_enum]
     #[bgc_repr(i8)]
-    frame_axis_right: Orientation,
+    pub frame_axis_right: Orientation,
 
     #[bgc_enum]
     #[bgc_repr(u8)]
-    frame_imu_pos: FrameImuPos,
+    pub frame_imu_pos: FrameImuPos,
 
     #[bgc_raw]
-    gyro_deadband: u8,
+    pub gyro_deadband: u8,
 
     #[bgc_raw]
-    gyro_sens: u8,
+    pub gyro_sens: u8,
 
     #[bgc_raw]
     #[bgc_repr(u8)]
-    i2c_speed_fast: bool,
+    pub i2c_speed_fast: bool,
 
     #[bgc_enum]
     #[bgc_repr(u8)]
-    skip_gyro_calib: GyroCalibrationMode,
+    pub skip_gyro_calib: GyroCalibrationMode,
 
     #[bgc_raw]
-    rc_cmd: [u8; 9], // TODO: implement RC_CMD_LOW .. MENU_CMD_LONG, probably as a couple of structs
+    pub rc_cmd: [u8; 9], // TODO: implement RC_CMD_LOW .. MENU_CMD_LONG, probably as a couple of structs
 
     #[bgc_payload]
     #[bgc_size(3)]
-    motor_output: RollPitchYaw<u8>,
+    pub motor_output: RollPitchYaw<u8>,
 
     /// Negative means means alarm is disabled.
     #[bgc_raw]
-    bat_threshold_alarm: i16,
+    pub bat_threshold_alarm: i16,
     /// Negative value means function is disabled.
     #[bgc_raw]
-    bat_threshold_motors: i16,
+    pub bat_threshold_motors: i16,
     /// Negative value means compensation is disabled.
     #[bgc_raw]
-    bat_comp_ref: i16,
+    pub bat_comp_ref: i16,
+
     #[bgc_enum]
     #[bgc_repr(u8)]
-    beeper_mode: BeeperMode,
+    pub beeper_mode: BeeperMode,
+
     #[bgc_raw]
     #[bgc_repr(u8)]
-    follow_roll_mix_start: u8,
+    pub follow_roll_mix_start: u8,
     #[bgc_raw]
     #[bgc_repr(u8)]
-    follow_roll_mix_range: u8,
+    pub follow_roll_mix_range: u8,
 
     #[bgc_payload]
     #[bgc_size(3)]
-    booster_power: RollPitchYaw<u8>,
+    pub booster_power: RollPitchYaw<u8>,
 
     #[bgc_payload]
     #[bgc_size(3)]
-    follow_speed: RollPitchYaw<u8>,
+    pub follow_speed: RollPitchYaw<u8>,
 
     #[bgc_raw]
     #[bgc_repr(u8)]
-    frame_angle_from_motors: bool,
+    pub frame_angle_from_motors: bool,
     /// Disabled = 0
     /// 1..32 - Virtual channel number as source of data to be output
     #[bgc_raw]
-    servo_out: [u8; 4],
+    pub servo_out: [u8; 4],
     /// PWM frequency, 10 Hz per unit.
     #[bgc_raw]
-    servo_rate: u8,
+    pub servo_rate: u8,
 
     #[bgc_flags]
     #[bgc_repr(u8)]
-    adaptive_pid_enabled: BitFlags<AdaptivePid>,
+    pub adaptive_pid_enabled: BitFlags<AdaptivePid>,
 
     #[bgc_raw]
-    adaptive_pid_threshold: u8,
+    pub adaptive_pid_threshold: u8,
 
     #[bgc_raw]
-    adaptive_pid_rate: u8,
+    pub adaptive_pid_rate: u8,
 
     #[bgc_raw]
-    adaptive_pid_recovery_factor: u8,
+    pub adaptive_pid_recovery_factor: u8,
 
     #[bgc_flags]
     #[bgc_repr(u16)]
-    general_flags: BitFlags<GeneralFlags>,
+    pub general_flags: BitFlags<GeneralFlags>,
 
     #[bgc_flags]
     #[bgc_repr(u16)]
-    profile_flags: BitFlags<ProfileFlags>,
+    pub profile_flags: BitFlags<ProfileFlags>,
 
     #[bgc_enum]
     #[bgc_repr(u8)]
-    spektrum_mode: SpektrumMode,
+    pub spektrum_mode: SpektrumMode,
 
     /// Order of hardware axes, counting from a camera. Implemented in
     /// special builds of firmware only.
     #[bgc_enum]
     #[bgc_repr(u8)]
-    order_of_axes: AxisOrder,
+    pub order_of_axes: AxisOrder,
 
     /// Order of Euler angles to represent the current orientation of a
     /// camera and the target of stabilization
     #[bgc_enum]
     #[bgc_repr(u8)]
-    euler_order: EulerOrder,
+    pub euler_order: EulerOrder,
 
     /// currently selected IMU
     #[bgc_enum]
     #[bgc_repr(u8)]
-    cur_imu: ImuType,
+    pub cur_imu: ImuType,
 
     /// profile ID which is currently active in the controller, 0...4
     #[bgc_raw]
-    cur_profile_id: u8,
+    pub cur_profile_id: u8,
 }

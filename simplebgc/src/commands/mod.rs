@@ -4,11 +4,13 @@ pub(crate) mod constants;
 
 mod board_info;
 mod control;
+mod get_angles;
 mod motors_off;
 mod read_params;
 
 pub use self::board_info::*;
 pub use self::control::*;
+pub use self::get_angles::*;
 pub use self::motors_off::*;
 pub use self::read_params::*;
 
@@ -28,26 +30,6 @@ impl<T: Payload + Copy> Copy for RollPitchYaw<T> {}
 roll_pitch_yaw!(u8, 1);
 roll_pitch_yaw!(i8, 1);
 
-#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
-pub struct AngleInfo {
-    /// Imu angles in 14-bit resolution per full turn
-    /// Units: 0,02197265625 degree
-    #[bgc_raw("IMU_ANGLE")]
-    imu_angle: i32,
-
-    /// Target angles in 14-bit resolution per full turn
-    /// Units: 0,02197265625 degree
-    #[bgc_raw("TARGET_ANGLE")]
-    target_angle: i32,
-
-    /// Target speed that gimbal should keep, over Euler axes
-    /// Units: 0,1220740379 degree/sec
-    #[bgc_raw("TARGET_SPEED")]
-    target_speed: i32,
-}
-
-roll_pitch_yaw!(AngleInfo, 4);
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum IncomingCommand {
     BoardInfo(BoardInfo),
@@ -63,11 +45,11 @@ pub enum OutgoingCommand {
     Control(ControlData),
     MotorsOn,
     MotorsOff { mode: Option<MotorsOffMode> },
-    ReadParams { profile_id: u8 },
-    ReadParams3 { profile_id: u8 },
-    ReadParamsExt { profile_id: u8 },
-    ReadParamsExt2 { profile_id: u8 },
-    ReadParamsExt3 { profile_id: u8 },
+    ReadParams(ParamsQuery),
+    ReadParams3(ParamsQuery),
+    ReadParamsExt(ParamsQuery),
+    ReadParamsExt2(ParamsQuery),
+    ReadParamsExt3(ParamsQuery),
     WriteParams(Params3Data),
     WriteParams3(Params3Data),
     GetAngles,

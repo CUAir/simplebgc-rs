@@ -240,21 +240,11 @@ impl Message for OutgoingCommand {
         use OutgoingCommand::*;
 
         Ok(match id {
-            CMD_READ_PARAMS => ReadParams {
-                profile_id: bytes.get_u8(),
-            },
-            CMD_READ_PARAMS_3 => ReadParams3 {
-                profile_id: bytes.get_u8(),
-            },
-            CMD_READ_PARAMS_EXT => ReadParamsExt {
-                profile_id: bytes.get_u8(),
-            },
-            CMD_READ_PARAMS_EXT2 => ReadParamsExt2 {
-                profile_id: bytes.get_u8(),
-            },
-            CMD_READ_PARAMS_EXT3 => ReadParamsExt3 {
-                profile_id: bytes.get_u8(),
-            },
+            CMD_READ_PARAMS => ReadParams(Payload::from_bytes(bytes)?),
+            CMD_READ_PARAMS_3 => ReadParams3(Payload::from_bytes(bytes)?),
+            CMD_READ_PARAMS_EXT => ReadParamsExt(Payload::from_bytes(bytes)?),
+            CMD_READ_PARAMS_EXT2 => ReadParamsExt2(Payload::from_bytes(bytes)?),
+            CMD_READ_PARAMS_EXT3 => ReadParamsExt3(Payload::from_bytes(bytes)?),
             CMD_WRITE_PARAMS => WriteParams(Payload::from_bytes(bytes)?),
             CMD_WRITE_PARAMS_3 => WriteParams3(Payload::from_bytes(bytes)?),
             CMD_GET_ANGLES => GetAngles,
@@ -287,13 +277,13 @@ impl Message for IncomingCommand {
         use IncomingCommand::*;
         match self {
             BoardInfo(info) => Payload::to_bytes(info),
-            GetAngles(angles) => angles.to_bytes(),
-            ReadParams(params) => params.to_bytes(),
-            ReadParams3(params) => params.to_bytes(),
+            GetAngles(angles) => Payload::to_bytes(angles),
+            ReadParams(params) => Payload::to_bytes(params),
+            ReadParams3(params) => Payload::to_bytes(params),
         }
     }
 
-    fn from_payload_bytes(id: u8, bytes: Bytes) -> Result<Self, MessageParseError>
+    fn from_payload_bytes(_id: u8, _bytes: Bytes) -> Result<Self, MessageParseError>
     where
         Self: Sized,
     {
@@ -303,7 +293,7 @@ impl Message for IncomingCommand {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Message, OutgoingCommand};
+    use crate::{Message, OutgoingCommand, ParamsQuery};
     use std::error::Error;
 
     #[test]
@@ -312,7 +302,10 @@ mod tests {
         let (msg, read) = OutgoingCommand::from_bytes(&packet[..])?;
 
         assert_eq!(read, 6, "should have read 6 bytes");
-        assert_eq!(msg, OutgoingCommand::ReadParams { profile_id: 1 });
+        assert_eq!(
+            msg,
+            OutgoingCommand::ReadParams(ParamsQuery { profile_id: 1 })
+        );
 
         Ok(())
     }
