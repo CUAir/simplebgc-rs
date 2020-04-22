@@ -68,6 +68,11 @@ pub struct AngleInfo {
     /// Units: 0,02197265625 degree
     #[bgc_raw("TARGET_ANGLE")]
     target_angle: i32,
+
+    /// Target speed that gimbal should keep, over Euler axes
+    /// Units: 0,1220740379 degree/sec
+    #[bgc_raw("TARGET_SPEED")]
+    target_speed: i32,
 }
 
 roll_pitch_yaw!(AngleInfo, 4);
@@ -82,7 +87,7 @@ pub enum IncomingCommand {
         frw_extra_id: u32,
         reserved: [u8; 7],
     },
-    GetAngles(AngleInfo),
+    GetAngles(RollPitchYaw<AngleInfo>),
     ReadParams(Params3Data),
     ReadParams3(Params3Data),
 }

@@ -287,7 +287,12 @@ impl Message for IncomingCommand {
 
     fn to_payload_bytes(&self) -> Bytes {
         use IncomingCommand::*;
-        unimplemented!();
+        match self {
+            BoardInfo { .. } => Bytes::default(), // TODO deal with later
+            GetAngles(angles) => angles.to_bytes(),
+            ReadParams(params) => params.to_bytes(),
+            ReadParams3(params) => params.to_bytes(),
+        }
     }
 
     fn from_payload_bytes(id: u8, bytes: Bytes) -> Result<Self, MessageParseError>
