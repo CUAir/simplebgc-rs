@@ -13,7 +13,7 @@ pub enum StateFlags1 {
 }
 
 #[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
-#[repr(u8)]
+#[repr(u16)]
 pub enum BoardFeatures {
     ThreeAxis = 1 << 0,
     BatMonitoring = 1 << 1,
@@ -38,16 +38,16 @@ pub struct BoardInfo {
     firmware_version: u16,
 
     #[bgc_flags("STATE_FLAGS1")]
-    #[repr(u8)]
-    state: StateFlags1,
+    #[bgc_repr(u8)]
+    state: BitFlags<StateFlags1>,
 
     #[bgc_flags("BOARD_FEATURES")]
-    #[repr(u16)]
-    board_features: BoardFeatures,
+    #[bgc_repr(u16)]
+    board_features: BitFlags<BoardFeatures>,
 
     #[bgc_flags("CONNECTION_FLAG")]
-    #[repr(u8)]
-    connection_flag: ConnectionFlag,
+    #[bgc_repr(u8)]
+    connection_flag: BitFlags<ConnectionFlag>,
 
     #[bgc_raw("FRW_EXTRA_ID")]
     frw_extra_id: u32,

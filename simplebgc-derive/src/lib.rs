@@ -10,6 +10,7 @@ use syn::group::Group;
 use syn::punctuated::Punctuated;
 use syn::token::Token;
 use syn::*;
+use syn::parse::Parse;
 
 enum FieldKind {
     Flags,
@@ -21,7 +22,7 @@ enum FieldKind {
 #[proc_macro_error]
 #[proc_macro_derive(
     BgcPayload,
-    attributes(bgc_flags, bgc_enum, bgc_payload, bgc_raw, bgc_size, repr)
+    attributes(bgc_flags, bgc_enum, bgc_payload, bgc_raw, bgc_size, bgc_repr)
 )]
 pub fn payload_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
@@ -30,7 +31,7 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
     match input.data {
         Data::Struct(data) => match data.fields {
             Fields::Named(fields) => {
-                let parse_info: Vec<(Ident, Option<Ident>, TokenStream2)> = fields
+                let parse_info: Vec<ParseStatement> = fields
                     .named
                     .iter()
                     .enumerate()
@@ -38,14 +39,14 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
                     .collect();
                 let var_idents: Vec<&Ident> = parse_info
                     .iter()
-                    .map(|(var_ident, _, _)| var_ident)
+                    .map(|stmt| &stmt.variable_ident)
                     .collect();
                 let field_idents: Vec<&Ident> = parse_info
                     .iter()
-                    .map(|(_, field_ident, _)| field_ident.as_ref().unwrap())
+                    .map(|stmt| stmt.field_ident.as_ref().unwrap())
                     .collect();
                 let parse_stmts: Vec<&TokenStream2> =
-                    parse_info.iter().map(|(_, _, stmt)| stmt).collect();
+                    parse_info.iter().map(|stmt| &stmt.stmt).collect();
 
                 quote! {
                     impl Payload for #type_ident {
@@ -70,7 +71,7 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
                 }
             }
             Fields::Unnamed(fields) => {
-                let parse_info: Vec<(Ident, Option<Ident>, TokenStream2)> = fields
+                let parse_info: Vec<ParseStatement> = fields
                     .unnamed
                     .iter()
                     .enumerate()
@@ -78,10 +79,10 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
                     .collect();
                 let var_idents: Vec<&Ident> = parse_info
                     .iter()
-                    .map(|(var_ident, _, _)| var_ident)
+                    .map(|stmt| &stmt.variable_ident)
                     .collect();
                 let parse_stmts: Vec<&TokenStream2> =
-                    parse_info.iter().map(|(_, _, stmt)| stmt).collect();
+                    parse_info.iter().map(|stmt| &stmt.stmt).collect();
 
                 quote! {
 
@@ -140,19 +141,150 @@ fn get_primitive_int_kind(ty: &TypePath) -> Option<&Ident> {
 }
 
 /// Returns (variable identifier, field identifier, parse statement)
-fn get_stmt_for_field(idx: usize, field: &Field) -> Option<(Ident, Option<Ident>, TokenStream2)> {
+fn get_stmt_for_field(idx: usize, field: &Field) -> Option<ParseStatement> {
+    let info = get_info_for_field(idx, field)?;
+    let spec_name = info.spec_name;
+    let spec_repr = info.spec_repr;
+    let spec_size = info.spec_size;
+    let variable_ident = info.variable_ident;
+    let field_kind = info.kind;
+    let field_ident = &field.ident;
+
+    match field_kind {
+        FieldKind::Payload => {
+            let field_type = &field.ty;
+            let spec_size = match info.spec_size {
+                Some(s) => s,
+                None => {
+                    emit_error!(field, "size must be specified for payload fields");
+                    return None;
+                }
+            };
+
+            Some(ParseStatement {
+                variable_ident: variable_ident.clone(),
+                field_ident: field_ident.clone(),
+                stmt: quote! {
+                    let #variable_ident: #field_type = Payload::from_bytes(b.split_to(#spec_size))
+                },
+            })
+        }
+        FieldKind::Flags | FieldKind::Enum => {
+            let repr = match spec_repr {
+                Some(r) => r,
+                None => {
+                    emit_error!(field.ty, "repr must be specified for enum and flags values");
+                    return None;
+                }
+            };
+
+            let get_value = if repr == "u8" || repr == "i8" {
+                format_ident!("get_{}", repr)
+            } else {
+                format_ident!("get_{}_le", repr)
+            };
+
+            match field_kind {
+                FieldKind::Flags => Some(ParseStatement {
+                    variable_ident: variable_ident.clone(),
+                    field_ident: field_ident.clone(),
+                    stmt: quote! {
+                        let #variable_ident = BitFlags::from_bits(b.#get_value())
+                            .or(Err(PayloadParseError::InvalidFlags { name: #spec_name.into() }))?;
+                    },
+                }),
+                FieldKind::Enum => {
+                    let from_value = format_ident!("from_{}", repr);
+                    Some(ParseStatement {
+                        variable_ident: variable_ident.clone(),
+                        field_ident: field_ident.clone(),
+                        stmt: quote! {
+                            let #variable_ident = FromPrimitive::#from_value(b.#get_value())
+                                .ok_or(PayloadParseError::InvalidEnum { name: #spec_name })?;
+                        },
+                    })
+                }
+                _ => unreachable!(),
+            }
+        }
+        FieldKind::Raw => match &field.ty {
+            Type::Path(ty) => match get_primitive_int_kind(ty) {
+                Some(repr) => {
+                    let get_value = if repr == "u8" || repr == "i8" {
+                        format_ident!("get_{}", repr)
+                    } else {
+                        format_ident!("get_{}_le", repr)
+                    };
+
+                    Some(ParseStatement {
+                        variable_ident: variable_ident.clone(),
+                        field_ident: field_ident.clone(),
+                        stmt: quote! {
+                            let #variable_ident = b.#get_value();
+                        },
+                    })
+                }
+                None => {
+                    emit_error!(
+                        field.ty,
+                        "field must be primitive type or array of u8 for raw values"
+                    );
+                    return None;
+                }
+            },
+            Type::Array(ty) => match ty.elem.as_ref() {
+                Type::Path(elem_ty) => match elem_ty.path.get_ident() {
+                    Some(i) if i == "u8" => {
+                        let len = &ty.len;
+
+                        Some(ParseStatement {
+                            variable_ident: variable_ident.clone(),
+                            field_ident: field_ident.clone(),
+                            stmt: quote! {
+                                let mut #variable_ident = [0u8; #len];
+                                b.copy_to_slice(&mut #variable_ident[..]);
+                            },
+                        })
+                    }
+                    _ => {
+                        emit_error!(
+                            field.ty,
+                            "field must be primitive type or array of u8 for raw values"
+                        );
+                        return None;
+                    }
+                },
+                _ => {
+                    emit_error!(
+                        field.ty,
+                        "field must be primitive type or array of u8 for raw values"
+                    );
+                    return None;
+                }
+            },
+            _ => {
+                emit_error!(
+                    field.ty,
+                    "field must be primitive type or array of u8 for raw values"
+                );
+                return None;
+            }
+        },
+    }
+}
+
+fn get_info_for_field(idx: usize, field: &Field) -> Option<FieldInfo> {
     // get name of field in Rust
     // or generate one if it doesn't have a name
     let field_ident = field.ident.clone();
     let variable_ident = field_ident.clone().unwrap_or(format_ident!("field{}", idx));
     let mut field_kind = None;
-
     let mut spec_name = None;
     let mut spec_size = None;
     let mut spec_repr = None;
 
     for attr in field.attrs.iter() {
-        if attr.path.is_ident("repr") {
+        if attr.path.is_ident("bgc_repr") {
             if spec_repr.is_some() {
                 emit_error!(attr, "multiple repr attributes on field not allowed");
                 return None;
@@ -254,125 +386,25 @@ fn get_stmt_for_field(idx: usize, field: &Field) -> Option<(Ident, Option<Ident>
     // if kind is assigned, then spec_name will be as well
     let spec_name = spec_name.unwrap();
 
-    match field_kind {
-        FieldKind::Payload => {
-            let field_type = &field.ty;
-            let spec_size = match spec_size {
-                Some(s) => s,
-                None => {
-                    emit_error!(field, "size must be specified for payload fields");
-                    return None;
-                }
-            };
+    Some(FieldInfo {
+        kind: field_kind,
+        variable_ident,
+        spec_name,
+        spec_repr,
+        spec_size,
+    })
+}
 
-            Some((
-                variable_ident.clone(),
-                field_ident,
-                quote! {
-                    let #variable_ident: #field_type = Payload::from_bytes(b.split_to(#spec_size))
-                },
-            ))
-        }
-        FieldKind::Flags | FieldKind::Enum => {
-            let repr = match spec_repr {
-                Some(r) => r,
-                None => {
-                    emit_error!(field.ty, "repr must be specified for enum and flags values");
-                    return None;
-                }
-            };
+struct FieldInfo {
+    kind: FieldKind,
+    variable_ident: Ident,
+    spec_repr: Option<Ident>,
+    spec_name: String,
+    spec_size: Option<usize>,
+}
 
-            let get_value = if repr == "u8" || repr == "i8" {
-                format_ident!("get_{}", repr)
-            } else {
-                format_ident!("{}_le", repr)
-            };
-
-            match field_kind {
-                FieldKind::Flags => Some((
-                    variable_ident.clone(),
-                    field_ident,
-                    quote! {
-                        let #variable_ident = BitFlags::from_bits(b.#get_value())
-                            .or(Err(PayloadParseError::InvalidFlags { name: #spec_name.into() }))?;
-                    },
-                )),
-                FieldKind::Enum => {
-                    let from_value = format_ident!("from_{}", repr);
-                    Some((
-                        variable_ident.clone(),
-                        field_ident,
-                        quote! {
-                            let #variable_ident = FromPrimitive::#from_value(b.#get_value())
-                                .ok_or(PayloadParseError::InvalidEnum { name: #spec_name })?;
-                        },
-                    ))
-                }
-                _ => unreachable!(),
-            }
-        }
-        FieldKind::Raw => match &field.ty {
-            Type::Path(ty) => match get_primitive_int_kind(ty) {
-                Some(repr) => {
-                    let get_value = if repr == "u8" || repr == "i8" {
-                        format_ident!("get_{}", repr)
-                    } else {
-                        format_ident!("get_{}_le", repr)
-                    };
-
-                    Some((
-                        variable_ident.clone(),
-                        field_ident,
-                        quote! {
-                            let #variable_ident = b.#get_value();
-                        },
-                    ))
-                }
-                None => {
-                    emit_error!(
-                        field.ty,
-                        "field must be primitive type or array of u8 for raw values"
-                    );
-                    return None;
-                }
-            },
-            Type::Array(ty) => match ty.elem.as_ref() {
-                Type::Path(elem_ty) => match elem_ty.path.get_ident() {
-                    Some(i) if i == "u8" => {
-                        let len = &ty.len;
-
-                        Some((
-                            variable_ident.clone(),
-                            field_ident,
-                            quote! {
-                                let mut #variable_ident = [0u8; #len];
-                                b.copy_to_slice(&mut #variable_ident[..]);
-                            },
-                        ))
-                    }
-                    _ => {
-                        emit_error!(
-                            field.ty,
-                            "field must be primitive type or array of u8 for raw values"
-                        );
-                        return None;
-                    }
-                },
-                _ => {
-                    emit_error!(
-                        field.ty,
-                        "field must be primitive type or array of u8 for raw values"
-                    );
-                    return None;
-                }
-            },
-            _ => {
-                emit_error!(
-                    field.ty,
-                    "field must be primitive type or array of u8 for raw values"
-                );
-                return None;
-            }
-        },
-    }
+struct ParseStatement {
+    variable_ident: Ident,
+    field_ident: Option<Ident>,
+    stmt: TokenStream2,
 }
