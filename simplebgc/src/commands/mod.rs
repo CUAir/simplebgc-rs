@@ -19,7 +19,7 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct RollPitchYaw<T: Payload> {
+pub struct RollPitchYaw<T> {
     pub roll: T,
     pub pitch: T,
     pub yaw: T,
