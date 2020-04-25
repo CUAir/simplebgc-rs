@@ -1,10 +1,9 @@
 use crate::commands::constants::*;
 use crate::payload::*;
-use crate::{OutgoingCommand, Params3Data};
+use crate::{IncomingCommand, OutgoingCommand};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::error::Error;
 use std::fmt::{Display, Formatter};
-use std::hash::Hasher;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum MessageParseError {
@@ -192,14 +191,12 @@ fn checksum_bgc_v1(buf: &[u8]) -> u8 {
 fn checksum_bgc_v2(buf: &[u8]) -> u16 {
     const POLYNOM: u16 = 0x8005;
     let mut crc = 0;
-    let mut data_bit = false;
-    let mut crc_bit = false;
 
     for &byte in buf.iter() {
         let mut shift_register = 1;
         while shift_register > 0 {
-            data_bit = byte & shift_register != 0;
-            crc_bit = (crc >> 15) != 0;
+            let data_bit = byte & shift_register != 0;
+            let crc_bit = (crc >> 15) != 0;
             crc <<= 1;
 
             if data_bit != crc_bit {
@@ -243,21 +240,11 @@ impl Message for OutgoingCommand {
         use OutgoingCommand::*;
 
         Ok(match id {
-            CMD_READ_PARAMS => ReadParams {
-                profile_id: bytes.get_u8(),
-            },
-            CMD_READ_PARAMS_3 => ReadParams3 {
-                profile_id: bytes.get_u8(),
-            },
-            CMD_READ_PARAMS_EXT => ReadParamsExt {
-                profile_id: bytes.get_u8(),
-            },
-            CMD_READ_PARAMS_EXT2 => ReadParamsExt2 {
-                profile_id: bytes.get_u8(),
-            },
-            CMD_READ_PARAMS_EXT3 => ReadParamsExt3 {
-                profile_id: bytes.get_u8(),
-            },
+            CMD_READ_PARAMS => ReadParams(Payload::from_bytes(bytes)?),
+            CMD_READ_PARAMS_3 => ReadParams3(Payload::from_bytes(bytes)?),
+            CMD_READ_PARAMS_EXT => ReadParamsExt(Payload::from_bytes(bytes)?),
+            CMD_READ_PARAMS_EXT2 => ReadParamsExt2(Payload::from_bytes(bytes)?),
+            CMD_READ_PARAMS_EXT3 => ReadParamsExt3(Payload::from_bytes(bytes)?),
             CMD_WRITE_PARAMS => WriteParams(Payload::from_bytes(bytes)?),
             CMD_WRITE_PARAMS_3 => WriteParams3(Payload::from_bytes(bytes)?),
             CMD_GET_ANGLES => GetAngles,
@@ -276,10 +263,37 @@ impl Message for OutgoingCommand {
     }
 }
 
+impl Message for IncomingCommand {
+    fn command_id(&self) -> u8 {
+        match self {
+            IncomingCommand::BoardInfo(_) => CMD_BOARD_INFO,
+            IncomingCommand::GetAngles(_) => CMD_GET_ANGLES,
+            IncomingCommand::ReadParams(_) => CMD_READ_PARAMS,
+            IncomingCommand::ReadParams3(_) => CMD_READ_PARAMS_3,
+        }
+    }
+
+    fn to_payload_bytes(&self) -> Bytes {
+        use IncomingCommand::*;
+        match self {
+            BoardInfo(info) => Payload::to_bytes(info),
+            GetAngles(angles) => Payload::to_bytes(angles),
+            ReadParams(params) => Payload::to_bytes(params),
+            ReadParams3(params) => Payload::to_bytes(params),
+        }
+    }
+
+    fn from_payload_bytes(_id: u8, _bytes: Bytes) -> Result<Self, MessageParseError>
+    where
+        Self: Sized,
+    {
+        unimplemented!();
+    }
+}
+
+#[cfg(test)]
 mod tests {
-    use crate::commands::constants::CMD_READ_PROFILE_NAMES;
-    use crate::ProfileFlags::OuterMotorLimitFreeRotation;
-    use crate::{Message, OutgoingCommand};
+    use crate::{Message, OutgoingCommand, ParamsQuery};
     use std::error::Error;
 
     #[test]
@@ -288,7 +302,10 @@ mod tests {
         let (msg, read) = OutgoingCommand::from_bytes(&packet[..])?;
 
         assert_eq!(read, 6, "should have read 6 bytes");
-        assert_eq!(msg, OutgoingCommand::ReadParams { profile_id: 1 });
+        assert_eq!(
+            msg,
+            OutgoingCommand::ReadParams(ParamsQuery { profile_id: 1 })
+        );
 
         Ok(())
     }
