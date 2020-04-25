@@ -44,7 +44,7 @@ macro_rules! read_flags_truncate {
 }
 
 #[macro_export]
-macro_rules! roll_pitch_yaw {
+macro_rules! rpy_payload {
     ($type: ty, $size: literal) => {
         impl Payload for RollPitchYaw<$type> {
             fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
@@ -68,6 +68,26 @@ macro_rules! roll_pitch_yaw {
                 b.put(Payload::to_bytes(&self.yaw));
                 b.freeze()
             }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! rpy {
+    ($rpy: ident, $axis: ident => $block: block) => {
+        {
+            let $axis = $rpy.roll;
+            $block;
+        }
+
+        {
+            let $axis = $rpy.pitch;
+            $block;
+        }
+
+        {
+            let $axis = $rpy.yaw;
+            $block;
         }
     };
 }

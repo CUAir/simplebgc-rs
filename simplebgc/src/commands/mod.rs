@@ -27,8 +27,8 @@ pub struct RollPitchYaw<T> {
 
 impl<T: Payload + Copy> Copy for RollPitchYaw<T> {}
 
-roll_pitch_yaw!(u8, 1);
-roll_pitch_yaw!(i8, 1);
+rpy_payload!(u8, 1);
+rpy_payload!(i8, 1);
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IncomingCommand {

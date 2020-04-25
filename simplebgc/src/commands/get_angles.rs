@@ -20,4 +20,4 @@ pub struct AngleInfo {
     pub target_speed: i32,
 }
 
-roll_pitch_yaw!(AngleInfo, 4);
+rpy_payload!(AngleInfo, 4);

@@ -20,7 +20,7 @@ pub struct AxisPidParams {
     pub poles: u8,
 }
 
-roll_pitch_yaw!(AxisPidParams, 6);
+rpy_payload!(AxisPidParams, 6);
 
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct AxisRcParams {
@@ -45,7 +45,7 @@ pub struct AxisRcParams {
     pub rc_follow: i8,
 }
 
-roll_pitch_yaw!(AxisRcParams, 8);
+rpy_payload!(AxisRcParams, 8);
 
 #[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
