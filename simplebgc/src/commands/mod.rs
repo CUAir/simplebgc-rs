@@ -20,9 +20,9 @@ use enumflags2::BitFlags;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RollPitchYaw<T: Payload> {
-    roll: T,
-    pitch: T,
-    yaw: T,
+    pub roll: T,
+    pub pitch: T,
+    pub yaw: T,
 }
 
 impl<T: Payload + Copy> Copy for RollPitchYaw<T> {}
