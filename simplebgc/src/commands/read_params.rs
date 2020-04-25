@@ -166,10 +166,11 @@ pub enum RcMixChannel {
 pub struct RcMix(
     #[bgc_enum("")]
     #[bgc_repr(u8)]
-    RcMixRate,
+    pub RcMixRate,
+
     #[bgc_enum("")]
     #[bgc_repr(u8)]
-    RcMixChannel,
+    pub RcMixChannel,
 );
 
 impl FromPrimitive for RcMix {

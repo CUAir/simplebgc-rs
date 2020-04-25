@@ -136,7 +136,8 @@ pub struct ControlAxisParams {
     /// (0.001 deg./sec., if the CONTROL_FLAG_HIGH_RES_SPEED
     /// is set)
     #[bgc_raw("SPEED")]
-    speed: i16,
+    pub speed: i16,
+
     /// Depends on the MODE parameter:
     /// - MODE_ANGLE, MODE_SPEED_ANGLE: encodes the target angle
     /// - MODE_SPEED: ignored
@@ -144,7 +145,7 @@ pub struct ControlAxisParams {
     /// - MODE_RC_HIGH_RES: encodes RC signal in range -16384..16384
     /// Units: 0,02197265625 degree.
     #[bgc_raw("ANGLE")]
-    angle: i16,
+    pub angle: i16,
 }
 
 roll_pitch_yaw!(ControlAxisParams, 4);
@@ -161,7 +162,7 @@ impl Payload for ControlData {
         Self: Sized,
     {
         Ok(ControlData {
-            mode: if b.remaining() == 13 {
+            mode: if b.remaining() < 15 {
                 ControlMode::Legacy(read_enum!(b, "CONTROL_MODE", u8)?)
             } else {
                 ControlMode::Extended(

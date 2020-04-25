@@ -2,7 +2,7 @@ extern crate proc_macro;
 extern crate proc_macro_error;
 extern crate quote;
 
-use proc_macro::TokenStream;
+use proc_macro::{TokenStream};
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro_error::*;
 use quote::{format_ident, quote, quote_spanned};
@@ -144,6 +144,11 @@ fn get_stmt_for_field(idx: usize, field: &Field) -> Option<ParseStatement> {
     let variable_ident = info.variable_ident;
     let field_kind = info.kind;
     let field_ident = &field.ident;
+
+    match field.vis {
+        Visibility::Public(_) => {},
+        _ => emit_error!(&field, "bgc payload fields should be public")
+    }
 
     match field_kind {
         FieldKind::Payload => {

@@ -32,26 +32,26 @@ pub enum ConnectionFlag {
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct BoardInfo {
     #[bgc_raw("BOARD_VER")]
-    board_version: u8,
+    pub board_version: u8,
 
     #[bgc_raw("FIRMWARE_VER")]
-    firmware_version: u16,
+    pub firmware_version: u16,
 
     #[bgc_flags("STATE_FLAGS1")]
     #[bgc_repr(u8)]
-    state: BitFlags<StateFlags1>,
+    pub state: BitFlags<StateFlags1>,
 
     #[bgc_flags]
     #[bgc_repr(u16)]
-    board_features: BitFlags<BoardFeatures>,
+    pub board_features: BitFlags<BoardFeatures>,
 
     #[bgc_flags]
     #[bgc_repr(u8)]
-    connection_flag: BitFlags<ConnectionFlag>,
+    pub connection_flag: BitFlags<ConnectionFlag>,
 
     #[bgc_raw]
-    frw_extra_id: u32,
+    pub frw_extra_id: u32,
 
     #[bgc_raw]
-    reserved: [u8; 7],
+    pub reserved: [u8; 7],
 }
