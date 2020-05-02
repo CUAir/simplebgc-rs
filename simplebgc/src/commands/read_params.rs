@@ -167,7 +167,6 @@ pub struct RcMix(
     #[bgc_enum("")]
     #[bgc_repr(u8)]
     pub RcMixRate,
-
     #[bgc_enum("")]
     #[bgc_repr(u8)]
     pub RcMixChannel,

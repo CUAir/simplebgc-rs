@@ -4,7 +4,7 @@ use enumflags2::BitFlags;
 use num_traits::FromPrimitive;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum ControlMode {
+pub enum ControlFormat {
     /// Mode is common for all axes
     Legacy(AxisControl),
     /// Mode is per-axis
@@ -12,7 +12,10 @@ pub enum ControlMode {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct AxisControl(pub AxisControlMode, pub BitFlags<AxisControlFlags>);
+pub struct AxisControl {
+    pub mode: AxisControlMode,
+    pub flags: BitFlags<AxisControlFlags>,
+}
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
@@ -107,10 +110,10 @@ impl FromPrimitive for AxisControl {
     }
 
     fn from_u8(n: u8) -> Option<Self> {
-        Some(AxisControl(
-            FromPrimitive::from_u8(n)?,
-            BitFlags::from_bits_truncate(n),
-        ))
+        Some(AxisControl {
+            mode: FromPrimitive::from_u8(n)?,
+            flags: BitFlags::from_bits_truncate(n),
+        })
     }
 
     fn from_u64(n: u64) -> Option<Self> {
@@ -119,7 +122,7 @@ impl FromPrimitive for AxisControl {
 }
 
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
-pub struct ControlAxisParams {
+pub struct AxisControlParams {
     /// Speed of rotation. Overrides the speed settings in the GUI and
     /// from the adjustable variables.
     /// Notes:
@@ -148,12 +151,12 @@ pub struct ControlAxisParams {
     pub angle: i16,
 }
 
-rpy_payload!(ControlAxisParams, 4);
+rpy_payload!(AxisControlParams, 4);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ControlData {
-    mode: ControlMode,
-    axes: RollPitchYaw<ControlAxisParams>,
+    mode: ControlFormat,
+    axes: RollPitchYaw<AxisControlParams>,
 }
 
 impl Payload for ControlData {
@@ -163,9 +166,9 @@ impl Payload for ControlData {
     {
         Ok(ControlData {
             mode: if b.remaining() < 15 {
-                ControlMode::Legacy(read_enum!(b, "CONTROL_MODE", u8)?)
+                ControlFormat::Legacy(read_enum!(b, "CONTROL_MODE", u8)?)
             } else {
-                ControlMode::Extended(
+                ControlFormat::Extended(
                     read_enum!(b, "CONTROL_MODE[0]", u8)?,
                     read_enum!(b, "CONTROL_MODE[1]", u8)?,
                     read_enum!(b, "CONTROL_MODE[2]", u8)?,

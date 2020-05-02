@@ -42,7 +42,10 @@ impl<T> RollPitchYaw<T> {
         }
     }
 
-    pub fn combine_mut<'a, U>(&mut self, other: &'a mut RollPitchYaw<U>) -> RollPitchYaw<(&mut T, &'a mut U)> {
+    pub fn combine_mut<'a, U>(
+        &mut self,
+        other: &'a mut RollPitchYaw<U>,
+    ) -> RollPitchYaw<(&mut T, &'a mut U)> {
         RollPitchYaw {
             roll: (&mut self.roll, &mut other.roll),
             pitch: (&mut self.pitch, &mut other.pitch),
@@ -84,7 +87,7 @@ impl<T> From<(T, T, T)> for RollPitchYaw<T> {
         RollPitchYaw {
             roll: t.0,
             pitch: t.1,
-            yaw: t.2
+            yaw: t.2,
         }
     }
 }
