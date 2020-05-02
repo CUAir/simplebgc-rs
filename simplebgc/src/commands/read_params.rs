@@ -400,12 +400,12 @@ pub enum ImuType {
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct RcMixes {
     #[kind(payload)]
-#[name("RC_MIX_FC_ROLL")]
+    #[name("RC_MIX_FC_ROLL")]
     #[size(2)]
     pub fc_roll: RcMix,
 
     #[kind(payload)]
-#[name("RC_MIX_FC_PITCH")]
+    #[name("RC_MIX_FC_PITCH")]
     #[size(2)]
     pub fc_pitch: RcMix,
 }
@@ -413,32 +413,32 @@ pub struct RcMixes {
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct RcMaps {
     #[kind(enumeration)]
-#[name("RC_MAP_ROLL")]
+    #[name("RC_MAP_ROLL")]
     #[format(u8)]
     pub roll: RcMap,
 
     #[kind(enumeration)]
-#[name("RC_MAP_PITCH")]
+    #[name("RC_MAP_PITCH")]
     #[format(u8)]
     pub pitch: RcMap,
 
     #[kind(enumeration)]
-#[name("RC_MAP_YAW")]
+    #[name("RC_MAP_YAW")]
     #[format(u8)]
     pub yaw: RcMap,
 
     #[kind(enumeration)]
-#[name("RC_MAP_CMD")]
+    #[name("RC_MAP_CMD")]
     #[format(u8)]
     pub cmd: RcMap,
 
     #[kind(enumeration)]
-#[name("RC_MAP_FC_ROLL")]
+    #[name("RC_MAP_FC_ROLL")]
     #[format(u8)]
     pub fc_roll: RcMap,
 
     #[kind(enumeration)]
-#[name("RC_MAP_FC_PITCH")]
+    #[name("RC_MAP_FC_PITCH")]
     #[format(u8)]
     pub fc_pitch: RcMap,
 }
@@ -454,7 +454,7 @@ pub struct Params3Data {
     /// profile ID to read or write. To access current (active) profile,
     /// specify 255. Possible values: 0..4
     #[kind(raw)]
-#[name("PROFILE_ID")]
+    #[name("PROFILE_ID")]
     pub profile_id: u8,
 
     #[kind(payload)]

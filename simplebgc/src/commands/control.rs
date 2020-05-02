@@ -139,7 +139,7 @@ pub struct AxisControlParams {
     /// (0.001 deg./sec., if the CONTROL_FLAG_HIGH_RES_SPEED
     /// is set)
     #[kind(raw)]
-#[name("SPEED")]
+    #[name("SPEED")]
     pub speed: i16,
 
     /// Depends on the MODE parameter:
@@ -149,7 +149,7 @@ pub struct AxisControlParams {
     /// - MODE_RC_HIGH_RES: encodes RC signal in range -16384..16384
     /// Units: 0,02197265625 degree.
     #[kind(raw)]
-#[name("ANGLE")]
+    #[name("ANGLE")]
     pub angle: i16,
 }
 
