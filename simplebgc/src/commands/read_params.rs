@@ -1,7 +1,7 @@
 use crate::*;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
-use num_traits::FromPrimitive;
+use num_traits::*;
 
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct AxisPidParams {

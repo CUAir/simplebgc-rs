@@ -35,6 +35,11 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
                     .filter_map(|info| get_parser_for_field(&info))
                     .collect::<Vec<_>>();
 
+                let ser_stmts = fields_info
+                    .iter()
+                    .filter_map(|info| get_serializer_for_field(&info))
+                    .collect::<Vec<_>>();
+
                 let vars = fields_info
                     .iter()
                     .map(|info| &info.variable)
@@ -62,7 +67,11 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
                         where
                             Self: Sized,
                         {
-                            unimplemented!()
+                            let mut b = BytesMut::new();
+
+                            #(#ser_stmts)*
+
+                            b.freeze()
                         }
                     }
                 }
@@ -79,6 +88,11 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
                     .iter()
                     .filter_map(|info| get_parser_for_field(&info))
                     .collect();
+
+                let ser_stmts = fields_info
+                    .iter()
+                    .filter_map(|info| get_serializer_for_field(&info))
+                    .collect::<Vec<_>>();
 
                 let vars = fields_info
                     .iter()
@@ -102,7 +116,11 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
                         where
                             Self: Sized,
                         {
-                            unimplemented!()
+                            let mut b = BytesMut::new();
+
+                            #(#ser_stmts)*
+
+                            b.freeze()
                         }
                     }
                 }
@@ -250,7 +268,7 @@ fn get_serializer_for_field(info: &FieldInfo) -> Option<TokenStream2> {
 
     match &info.kind {
         FieldKind::Payload { ty, size } => Some(quote_spanned! {span=>
-            b.put(Payload::to_bytes(self.#ident));
+            b.put(Payload::to_bytes(&self.#ident));
         }),
         FieldKind::Flags { repr } => {
             let put_value = match repr {
@@ -271,23 +289,27 @@ fn get_serializer_for_field(info: &FieldInfo) -> Option<TokenStream2> {
             let to_value = format_ident!("to_{}", repr);
 
             Some(quote_spanned! {span=>
-                b.#put_value(ToPrimitive::#to_value(self.#ident));
+                b.#put_value(ToPrimitive::#to_value(&self.#ident).unwrap());
             })
         }
         FieldKind::Raw { ty } => {
             // if it is a primitive, this is simple
             if let Ok(repr) = PrimitiveKind::try_from(ty.clone()) {
                 return Some(match repr {
-                    PrimitiveKind::Bool | PrimitiveKind::U8 | PrimitiveKind::I8 => {
-                        let put_value = format_ident!("put_{}", repr);
-                        let repr = repr.to_string();
+                    PrimitiveKind::Bool => {
                         quote_spanned! {span=>
-                            b.#put_value(self.#ident as #repr);
+                            b.put_u8(self.#ident as u8);
+                        }
+                    }
+                    PrimitiveKind::U8 | PrimitiveKind::I8 => {
+                        let put_value = format_ident!("put_{}", repr);
+                        quote_spanned! {span=>
+                            b.#put_value(self.#ident);
                         }
                     }
                     _ => {
                         let put_value = format_ident!("put_{}_le", repr);
-                        let repr = repr.to_string();
+                        let repr = format_ident!("{}", repr);
                         quote_spanned! {span=>
                             b.#put_value(self.#ident as #repr);
                         }
