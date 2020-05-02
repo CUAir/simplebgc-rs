@@ -26,7 +26,15 @@ pub struct RollPitchYaw<T> {
 }
 
 impl<T> RollPitchYaw<T> {
-    pub fn combine<'a, U>(&self, other: &'a RollPitchYaw<U>) -> RollPitchYaw<(&T, &'a U)> {
+    pub fn combine<U>(self, other: RollPitchYaw<U>) -> RollPitchYaw<(T, U)> {
+        RollPitchYaw {
+            roll: (self.roll, other.roll),
+            pitch: (self.pitch, other.pitch),
+            yaw: (self.yaw, other.yaw),
+        }
+    }
+
+    pub fn combine_ref<'a, U>(&self, other: &'a RollPitchYaw<U>) -> RollPitchYaw<(&T, &'a U)> {
         RollPitchYaw {
             roll: (&self.roll, &other.roll),
             pitch: (&self.pitch, &other.pitch),
