@@ -34,6 +34,14 @@ impl<T> RollPitchYaw<T> {
         }
     }
 
+    pub fn update<U, F: Fn(&mut T) -> U>(&mut self, op: F) -> RollPitchYaw<U> {
+        RollPitchYaw {
+            roll: op(&mut self.roll),
+            pitch: op(&mut self.pitch),
+            yaw: op(&mut self.yaw),
+        }
+    }
+
     pub fn exec<U, F: Fn(&T) -> U>(&self, op: F) {
         op(&self.roll);
         op(&self.pitch);
