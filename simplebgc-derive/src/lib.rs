@@ -118,8 +118,6 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
 const ERR_RAW_PRIMITIVE: &str =
     "field must be primitive type, tuple of primitive types, or array of u8 for raw values";
 
-/// idx: the counter for auto-generated variable names
-/// info: information about the current field
 fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
     let var = &info.variable;
     let span = info.span;
@@ -227,6 +225,89 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
                             #(#item_parse_stmts)*
                             (#(#item_vars),*)
                         };
+                    })
+                }
+                _ => {
+                    emit_error!(ty, ERR_RAW_PRIMITIVE);
+                    return None;
+                }
+            }
+        }
+    }
+}
+
+fn get_serializer_for_field(info: &FieldInfo) -> Option<TokenStream2> {
+    let var = &info.variable;
+    let span = info.span;
+    let name = &info.name;
+    let ident = &info.ident;
+
+    if ident.is_none() {
+        return Some(quote! {
+            unimplemented!("tuple structs can't be serialized yet");
+        });
+    }
+
+    match &info.kind {
+        FieldKind::Payload { ty, size } => Some(quote_spanned! {span=>
+            b.put(Payload::to_bytes(self.#ident));
+        }),
+        FieldKind::Flags { repr } => {
+            let put_value = match repr {
+                PrimitiveKind::U8 | PrimitiveKind::I8 => format_ident!("put_{}", repr),
+                _ => format_ident!("put_{}_le", repr),
+            };
+
+            Some(quote_spanned! {span=>
+                b.#put_value(self.#ident.bits());
+            })
+        }
+        FieldKind::Enum { repr } => {
+            let put_value = match repr {
+                PrimitiveKind::U8 | PrimitiveKind::I8 => format_ident!("put_{}", repr),
+                _ => format_ident!("put_{}_le", repr),
+            };
+
+            let to_value = format_ident!("to_{}", repr);
+
+            Some(quote_spanned! {span=>
+                b.#put_value(ToPrimitive::#to_value(self.#ident));
+            })
+        }
+        FieldKind::Raw { ty } => {
+            // if it is a primitive, this is simple
+            if let Ok(repr) = PrimitiveKind::try_from(ty.clone()) {
+                return Some(match repr {
+                    PrimitiveKind::Bool | PrimitiveKind::U8 | PrimitiveKind::I8 => {
+                        let put_value = format_ident!("put_{}", repr);
+                        let repr = repr.to_string();
+                        quote_spanned! {span=>
+                            b.#put_value(self.#ident as #repr);
+                        }
+                    }
+                    _ => {
+                        let put_value = format_ident!("put_{}_le", repr);
+                        let repr = repr.to_string();
+                        quote_spanned! {span=>
+                            b.#put_value(self.#ident as #repr);
+                        }
+                    }
+                });
+            }
+            match ty {
+                Type::Array(ty) => {
+                    if let Ok(PrimitiveKind::U8) = PrimitiveKind::try_from(ty.elem.as_ref().clone())
+                    {
+                        Some(quote_spanned! {span=>
+                            b.copy_from_slice(&self.#ident[..]);
+                        })
+                    } else {
+                        None
+                    }
+                }
+                Type::Tuple(ty) => {
+                    Some(quote_spanned! {span=>
+                        unimplemented!("tuple values can't be serialized yet");
                     })
                 }
                 _ => {

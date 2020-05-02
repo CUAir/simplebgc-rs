@@ -1,8 +1,9 @@
 use std::convert::{TryFrom};
 use std::result::Result;
 use syn::{Path, Type, TypePath};
-use proc_macro2::{Ident};
-use quote::IdentFragment;
+use proc_macro2::{Ident, TokenStream};
+use quote::{IdentFragment};
+use std::fmt::Display;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PrimitiveKind {
@@ -24,7 +25,7 @@ pub struct InvalidPrimitiveError {
     ty: Type,
 }
 
-impl IdentFragment for PrimitiveKind {
+impl Display for PrimitiveKind {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             PrimitiveKind::I8 => write!(f, "i8"),
@@ -42,6 +43,11 @@ impl IdentFragment for PrimitiveKind {
     }
 }
 
+impl IdentFragment for PrimitiveKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        Display::fmt(&self, f)
+    }
+}
 
 impl TryFrom<Ident> for PrimitiveKind {
     type Error = InvalidPrimitiveError;
