@@ -17,6 +17,7 @@ pub struct AngleInfo {
     /// Target speed that gimbal should keep, over Euler axes
     /// Units: 0,1220740379 degree/sec
     #[bgc_raw("TARGET_SPEED")]
+    #[kind(enum)]
     pub target_speed: i32,
 }
 
