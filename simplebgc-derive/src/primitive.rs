@@ -1,9 +1,11 @@
-use proc_macro::Ident;
 use std::convert::{TryFrom, TryInto};
 use std::result::Result;
 use syn::{Path, Type, TypePath};
+use proc_macro2::{Span, Ident};
+use quote::IdentFragment;
+use syn::export::Formatter;
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PrimitiveKind {
     I8,
     U8,
@@ -18,9 +20,29 @@ pub enum PrimitiveKind {
     Bool,
 }
 
+#[derive(Clone)]
 pub struct InvalidPrimitiveError {
     ty: Type,
 }
+
+impl IdentFragment for PrimitiveKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            PrimitiveKind::I8 => write!(f, "i8"),
+            PrimitiveKind::U8 => write!(f, "u8"),
+            PrimitiveKind::I16 => write!(f, "i16"),
+            PrimitiveKind::U16 => write!(f, "u16"),
+            PrimitiveKind::I32 => write!(f, "i32"),
+            PrimitiveKind::U32 => write!(f, "u32"),
+            PrimitiveKind::I64 => write!(f, "i64"),
+            PrimitiveKind::U64 => write!(f, "u64"),
+            PrimitiveKind::I128 => write!(f, "i128"),
+            PrimitiveKind::U128 => write!(f, "u128"),
+            PrimitiveKind::Bool => write!(f, "bool"),
+        }
+    }
+}
+
 
 impl TryFrom<Ident> for PrimitiveKind {
     type Error = InvalidPrimitiveError;
@@ -66,10 +88,10 @@ impl TryFrom<Type> for PrimitiveKind {
     fn try_from(ty: Type) -> Result<Self, Self::Error> {
         match ty {
             Type::Path(ref path) => match path.path.get_ident() {
-                Some(ident) => ident.try_into(),
-                _ => InvalidPrimitiveError { ty },
+                Some(ident) => PrimitiveKind::try_from(ident.clone()),
+                _ => Err(InvalidPrimitiveError { ty }),
             },
-            _ => InvalidPrimitiveError { ty },
+            _ => Err(InvalidPrimitiveError { ty }),
         }
     }
 }

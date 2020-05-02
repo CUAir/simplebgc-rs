@@ -2,9 +2,8 @@ extern crate proc_macro;
 extern crate proc_macro_error;
 extern crate quote;
 
-use crate::field::{get_info_for_field, FieldInfo, FieldKind};
-use crate::primitive::PrimitiveKind;
-use enumflags2::_internal::core::convert::TryFrom;
+use crate::field::*;
+use crate::primitive::*;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro_error::*;
@@ -20,36 +19,37 @@ mod primitive;
 #[proc_macro_derive(BgcPayload, attributes(kind, size, name, repr))]
 pub fn payload_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    let type_ident = input.ident;
+    let ty = input.ident;
 
     match input.data {
         Data::Struct(data) => match data.fields {
             Fields::Named(fields) => {
-                let parse_info: Vec<ParseStmtInfo> = fields
+                let mut fields_info = fields
                     .named
                     .iter()
                     .enumerate()
-                    .filter_map(|(i, field)| get_parser_for_field(i, field))
-                    .collect();
-                let var_idents: Vec<&Ident> =
-                    parse_info.iter().map(|stmt| &stmt.variable_ident).collect();
-                let field_idents: Vec<&Ident> = parse_info
+                    .filter_map(|(i, field)| get_info_for_field(i, field))
+                    .collect::<Vec<_>>();
+
+                let parse_stmts = fields_info
                     .iter()
-                    .map(|stmt| stmt.field_ident.as_ref().unwrap())
-                    .collect();
-                let parse_stmts: Vec<&TokenStream2> =
-                    parse_info.iter().map(|stmt| &stmt.stmt).collect();
+                    .filter_map(|info| get_parser_for_field(&info))
+                    .collect::<Vec<_>>();
+
+                let vars = fields_info.iter().map(|info| &info.variable).collect::<Vec<_>>();
+
+                let fields = fields_info.iter().map(|info| (&info.ident).as_ref().unwrap()).collect::<Vec<_>>();
 
                 quote! {
-                    impl Payload for #type_ident {
+                    impl Payload for #ty {
                         fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
                         where
                             Self: Sized,
                         {
                             #(#parse_stmts)*
 
-                            Ok(#type_ident {
-                                #(#field_idents: #var_idents),*
+                            Ok(#ty {
+                                #(#fields: #vars),*
                             })
                         }
 
@@ -63,28 +63,30 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
                 }
             }
             Fields::Unnamed(fields) => {
-                let parse_info: Vec<ParseStmtInfo> = fields
+                let mut fields_info: Vec<_> = fields
                     .unnamed
                     .iter()
                     .enumerate()
-                    .filter_map(|(i, field)| get_parser_for_field(i, field))
+                    .filter_map(|(i, field)| get_info_for_field(i, field))
                     .collect();
-                let var_idents: Vec<&Ident> =
-                    parse_info.iter().map(|stmt| &stmt.variable_ident).collect();
-                let parse_stmts: Vec<&TokenStream2> =
-                    parse_info.iter().map(|stmt| &stmt.stmt).collect();
+
+                let parse_stmts: Vec<_> = fields_info
+                    .iter()
+                    .filter_map(|info| get_parser_for_field(&info))
+                    .collect();
+
+                let vars = fields_info.iter().map(|info| &info.variable).collect::<Vec<_>>();
 
                 quote! {
-
-                    impl Payload for #type_ident {
+                    impl Payload for #ty {
                         fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
                         where
                             Self: Sized,
                         {
                             #(#parse_stmts)*
 
-                            Ok(#type_ident (
-                                #(#var_idents),*
+                            Ok(#ty (
+                                #(#vars),*
                             ))
                         }
 
@@ -137,7 +139,8 @@ const ERR_RAW_PRIMITIVE: &str =
 /// info: information about the current field
 fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
     let var = &info.variable;
-    let span = &info.span;
+    let span = info.span;
+    let name = &info.name;
 
     match &info.kind {
         FieldKind::Payload { ty, size } => Some(quote_spanned! {span=>
@@ -151,7 +154,7 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
 
             Some(quote_spanned! {span=>
                 let #var = BitFlags::from_bits(b.#get_value())
-                    .or(Err(PayloadParseError::InvalidFlags { name: #spec_name.into() }))?;
+                    .or(Err(PayloadParseError::InvalidFlags { name: #name.into() }))?;
             })
         }
         FieldKind::Enum { repr } => {
@@ -160,14 +163,16 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
                 _ => format_ident!("get_{}_le", repr),
             };
 
+            let from_value = format_ident!("from_{}", repr);
+
             Some(quote_spanned! {span=>
                 let #var = FromPrimitive::#from_value(b.#get_value())
-                    .ok_or(PayloadParseError::InvalidEnum { name: #spec_name.into() })?;
+                    .ok_or(PayloadParseError::InvalidEnum { name: #name.into() })?;
             })
         }
         FieldKind::Raw { ty } => {
             // if it is a primitive, this is simple
-            if let Ok(repr) = PrimitiveKind::try_from(ty) {
+            if let Ok(repr) = PrimitiveKind::try_from(ty.clone()) {
                 let get_value = match repr {
                     PrimitiveKind::U8 | PrimitiveKind::I8 => format_ident!("get_{}", repr),
                     _ => format_ident!("get_{}_le", repr),
@@ -178,9 +183,9 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
                 });
             }
 
-            match &field.ty {
+            match ty {
                 Type::Array(ty) => {
-                    if Ok(PrimitiveKind::U8) == PrimitiveKind::try_from(ty.elem.as_ref()) {
+                    if let Ok(PrimitiveKind::U8) = PrimitiveKind::try_from(ty.elem.as_ref().clone()) {
                         let len = &ty.len;
 
                         Some(quote_spanned! {span=>
@@ -188,13 +193,13 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
                             b.copy_to_slice(&mut #var[..]);
                         })
                     } else {
-                        emit_error!(field.ty, ERR_RAW_PRIMITIVE);
+                        emit_error!(ty, ERR_RAW_PRIMITIVE);
                         None
                     }
                 }
                 Type::Tuple(ty) => {
                     let mut item_parse_stmts =
-                        ty.elems.iter().enumerate().map(|(elem_idx, elem_ty)| {
+                        ty.elems.iter().enumerate().filter_map(|(elem_idx, elem_ty)| {
                             get_parser_for_field(&FieldInfo {
                                 name: format!("{}[{}]", &info.name, elem_idx),
                                 kind: FieldKind::Raw {
@@ -203,22 +208,27 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
                                 span: info.span.clone(),
                                 variable: format_ident!("{}_{}", &info.variable, elem_idx),
                                 ident: None,
-                            });
-                        });
+                            })
+                        }).collect::<Vec<_>>();
 
                     let mut item_vars = ty.elems.iter().enumerate().map(|(elem_idx, elem_ty)| {
                         format_ident!("{}_{}", &info.variable, elem_idx)
-                    });
+                    }).collect::<Vec<_>>();
+
+                    if item_vars.len() != item_parse_stmts.len() {
+                        // some of the parse statement generations failed, abort
+                        return None;
+                    }
 
                     Some(quote_spanned! {span=>
-                        let #variable_ident = {
+                        let #var = {
                             #(#item_parse_stmts)*
-                            (#(item_vars),*)
+                            (#(#item_vars),*)
                         };
                     })
                 }
                 _ => {
-                    emit_error!(field.ty, ERR_RAW_PRIMITIVE);
+                    emit_error!(ty, ERR_RAW_PRIMITIVE);
                     return None;
                 }
             }

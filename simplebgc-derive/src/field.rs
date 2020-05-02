@@ -1,6 +1,9 @@
+use quote::{format_ident, quote, quote_spanned};
+use proc_macro_error::{emit_error};
+
 use crate::primitive::*;
 use std::collections::HashMap;
-use std::convert::TryInto;
+use std::convert::{TryInto, TryFrom};
 use syn::*;
 use syn::spanned::Spanned;
 use syn::export::Span;
@@ -30,17 +33,19 @@ pub fn get_info_for_field(idx: usize, field: &Field) -> Option<FieldInfo> {
     // or generate one if it doesn't have a name
     let variable = field.ident.clone().unwrap_or(format_ident!("field{}", idx));
 
-    let attrs: HashMap<_, _> = field
-        .attrs
-        .iter()
-        .filter_map(|attr| Some((attr.path.get_ident()?, attr)))
-        .collect();
-
     let repr: Option<PrimitiveKind> =
-        attrs
-            .get("repr".into())
-            .and_then(|&attr| match attr.parse_args::<Type>().try_into() {
-                Ok(ty) => Some(ty),
+        field.attrs
+            .iter()
+            .filter(|&attr| attr.path.is_ident("repr"))
+            .last()
+            .and_then(|attr| match attr.parse_args::<Type>() {
+                Ok(ty) => match ty.try_into() {
+                    Ok(ty) => Some(ty),
+                    _ => {
+                        emit_error!(attr, "invalid repr attribute");
+                        return None;
+                    }
+                },
                 _ => {
                     emit_error!(attr, "invalid repr attribute");
                     return None;
@@ -48,9 +53,11 @@ pub fn get_info_for_field(idx: usize, field: &Field) -> Option<FieldInfo> {
             });
 
     let size: Option<usize> =
-        attrs
-            .get("bgc_size".into())
-            .and_then(|&attr| match attr.parse_args::<LitInt>() {
+        field.attrs
+            .iter()
+            .filter(|&attr| attr.path.is_ident("size"))
+            .last()
+            .and_then(|attr| match attr.parse_args::<LitInt>() {
                 Ok(s) => match s.base10_parse::<usize>() {
                     Ok(s) => Some(s),
                     Err(_) => {
@@ -64,9 +71,11 @@ pub fn get_info_for_field(idx: usize, field: &Field) -> Option<FieldInfo> {
                 }
             });
 
-    let kind = attrs
-        .get("kind".into())
-        .and_then(|&attr| match attr.parse_args::<Ident>() {
+    let kind = field.attrs
+        .iter()
+        .filter(|&attr| attr.path.is_ident("kind"))
+        .last()
+        .and_then(|attr| match attr.parse_args::<Ident>() {
             Ok(ident) if ident == "raw" => Some(FieldKind::Raw {
                 ty: field.ty.clone()
             }),
@@ -112,16 +121,18 @@ pub fn get_info_for_field(idx: usize, field: &Field) -> Option<FieldInfo> {
         }
     };
 
-    let name: Option<String> = attrs
-        .get("name".into())
-        .and_then(|&attr| match attr.parse_args::<LitStr>() {
+    let name: Option<String> = field.attrs
+        .iter()
+        .filter(|&attr| attr.path.is_ident("name"))
+        .last()
+        .and_then(|attr| match attr.parse_args::<LitStr>() {
             Ok(name) => Some(name.value()),
             _ => {
                 emit_error!(attr, "invalid name attribute");
                 return None;
             }
         })
-        .or(field.ident.clone().into());
+        .or(field.ident.clone().map(|i| i.to_string()));
 
     let name = match name {
         Some(name) => name,
