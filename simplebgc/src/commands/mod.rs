@@ -25,7 +25,39 @@ pub struct RollPitchYaw<T> {
     pub yaw: T,
 }
 
-impl<T: Payload + Copy> Copy for RollPitchYaw<T> {}
+impl<T> RollPitchYaw<T> {
+    pub fn map<U, F: Fn(T) -> U>(self, op: F) -> RollPitchYaw<U> {
+        RollPitchYaw {
+            roll: op(self.roll),
+            pitch: op(self.pitch),
+            yaw: op(self.yaw),
+        }
+    }
+
+    pub fn exec<U, F: Fn(&T) -> U>(&self, op: F) {
+        op(&self.roll);
+        op(&self.pitch);
+        op(&self.yaw);
+    }
+}
+
+impl<T> Into<(T, T, T)> for RollPitchYaw<T> {
+    fn into(self) -> (T, T, T) {
+        (self.roll, self.pitch, self.yaw)
+    }
+}
+
+impl<T> From<(T, T, T)> for RollPitchYaw<T> {
+    fn from(t: (T, T, T)) -> Self {
+        RollPitchYaw {
+            roll: t.0,
+            pitch: t.1,
+            yaw: t.2
+        }
+    }
+}
+
+impl<T: Copy> Copy for RollPitchYaw<T> {}
 
 rpy_payload!(u8, 1);
 rpy_payload!(i8, 1);

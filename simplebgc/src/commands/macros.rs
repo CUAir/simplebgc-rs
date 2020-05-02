@@ -72,22 +72,3 @@ macro_rules! rpy_payload {
     };
 }
 
-#[macro_export]
-macro_rules! rpy {
-    ($rpy: ident, $axis: ident => $block: block) => {
-        {
-            let $axis = $rpy.roll;
-            $block;
-        }
-
-        {
-            let $axis = $rpy.pitch;
-            $block;
-        }
-
-        {
-            let $axis = $rpy.yaw;
-            $block;
-        }
-    };
-}
