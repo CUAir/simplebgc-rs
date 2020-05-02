@@ -1,9 +1,8 @@
-use quote::{format_ident, quote, quote_spanned};
+use quote::{format_ident};
 use proc_macro_error::{emit_error};
 
 use crate::primitive::*;
-use std::collections::HashMap;
-use std::convert::{TryInto, TryFrom};
+use std::convert::{TryInto};
 use syn::*;
 use syn::spanned::Spanned;
 use syn::export::Span;
@@ -36,7 +35,8 @@ pub fn get_info_for_field(idx: usize, field: &Field) -> Option<FieldInfo> {
     let repr: Option<PrimitiveKind> =
         field.attrs
             .iter()
-            .filter(|&attr| attr.path.is_ident("repr"))
+            // actual helper attribute is called "format" to avoid conflict
+            .filter(|&attr| attr.path.is_ident("format"))
             .last()
             .and_then(|attr| match attr.parse_args::<Type>() {
                 Ok(ty) => match ty.try_into() {
@@ -79,7 +79,7 @@ pub fn get_info_for_field(idx: usize, field: &Field) -> Option<FieldInfo> {
             Ok(ident) if ident == "raw" => Some(FieldKind::Raw {
                 ty: field.ty.clone()
             }),
-            Ok(ident) if ident == "enum" => Some(FieldKind::Enum {
+            Ok(ident) if ident == "enumeration" => Some(FieldKind::Enum {
                 repr: match repr {
                     Some(repr) => repr,
                     _ => {

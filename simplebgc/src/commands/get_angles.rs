@@ -6,18 +6,20 @@ use enumflags2::BitFlags;
 pub struct AngleInfo {
     /// Imu angles in 14-bit resolution per full turn
     /// Units: 0,02197265625 degree
-    #[bgc_raw("IMU_ANGLE")]
+    #[kind(raw)]
+    #[name("IMU_ANGLE")]
     pub imu_angle: i32,
 
     /// Target angles in 14-bit resolution per full turn
     /// Units: 0,02197265625 degree
-    #[bgc_raw("TARGET_ANGLE")]
+    #[kind(raw)]
+    #[name("TARGET_ANGLE")]
     pub target_angle: i32,
 
     /// Target speed that gimbal should keep, over Euler axes
     /// Units: 0,1220740379 degree/sec
-    #[bgc_raw("TARGET_SPEED")]
-    #[kind(enum)]
+    #[kind(raw)]
+    #[name("TARGET_SPEED")]
     pub target_speed: i32,
 }
 

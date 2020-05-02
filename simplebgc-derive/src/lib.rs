@@ -9,14 +9,13 @@ use proc_macro2::TokenStream as TokenStream2;
 use proc_macro_error::*;
 use quote::{format_ident, quote, quote_spanned};
 use std::convert::TryFrom;
-use syn::spanned::Spanned;
 use syn::*;
 
 mod field;
 mod primitive;
 
 #[proc_macro_error]
-#[proc_macro_derive(BgcPayload, attributes(kind, size, name, repr))]
+#[proc_macro_derive(BgcPayload, attributes(kind, size, name, format))]
 pub fn payload_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let ty = input.ident;
@@ -24,7 +23,7 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
     match input.data {
         Data::Struct(data) => match data.fields {
             Fields::Named(fields) => {
-                let mut fields_info = fields
+                let fields_info = fields
                     .named
                     .iter()
                     .enumerate()
@@ -36,9 +35,15 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
                     .filter_map(|info| get_parser_for_field(&info))
                     .collect::<Vec<_>>();
 
-                let vars = fields_info.iter().map(|info| &info.variable).collect::<Vec<_>>();
+                let vars = fields_info
+                    .iter()
+                    .map(|info| &info.variable)
+                    .collect::<Vec<_>>();
 
-                let fields = fields_info.iter().map(|info| (&info.ident).as_ref().unwrap()).collect::<Vec<_>>();
+                let fields = fields_info
+                    .iter()
+                    .map(|info| (&info.ident).as_ref().unwrap())
+                    .collect::<Vec<_>>();
 
                 quote! {
                     impl Payload for #ty {
@@ -63,7 +68,7 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
                 }
             }
             Fields::Unnamed(fields) => {
-                let mut fields_info: Vec<_> = fields
+                let fields_info: Vec<_> = fields
                     .unnamed
                     .iter()
                     .enumerate()
@@ -75,7 +80,10 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
                     .filter_map(|info| get_parser_for_field(&info))
                     .collect();
 
-                let vars = fields_info.iter().map(|info| &info.variable).collect::<Vec<_>>();
+                let vars = fields_info
+                    .iter()
+                    .map(|info| &info.variable)
+                    .collect::<Vec<_>>();
 
                 quote! {
                     impl Payload for #ty {
@@ -105,31 +113,6 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
         Data::Union(_) => unimplemented!(),
     }
     .into()
-}
-
-/// Returns true if ty is a primitive integer type
-/// usize and isize don't count, but u128 and i128 do
-fn get_primitive_int_kind(ty: &TypePath) -> Option<&Ident> {
-    match ty.path.get_ident() {
-        Some(ident) => {
-            if ident == "u8"
-                || ident == "i8"
-                || ident == "u16"
-                || ident == "i16"
-                || ident == "u32"
-                || ident == "i32"
-                || ident == "u64"
-                || ident == "i64"
-                || ident == "u128"
-                || ident == "i128"
-            {
-                Some(ident)
-            } else {
-                None
-            }
-        }
-        None => None,
-    }
 }
 
 const ERR_RAW_PRIMITIVE: &str =
@@ -173,19 +156,31 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
         FieldKind::Raw { ty } => {
             // if it is a primitive, this is simple
             if let Ok(repr) = PrimitiveKind::try_from(ty.clone()) {
-                let get_value = match repr {
-                    PrimitiveKind::U8 | PrimitiveKind::I8 => format_ident!("get_{}", repr),
-                    _ => format_ident!("get_{}_le", repr),
-                };
-
-                return Some(quote_spanned! {span=>
-                    let #var = b.#get_value();
+                return Some(match repr {
+                    PrimitiveKind::Bool => {
+                        quote_spanned! {span=>
+                            let #var = b.get_u8() != 0;
+                        }
+                    }
+                    PrimitiveKind::U8 | PrimitiveKind::I8 => {
+                        let get_value = format_ident!("get_{}", repr);
+                        quote_spanned! {span=>
+                            let #var = b.#get_value();
+                        }
+                    }
+                    _ => {
+                        let get_value = format_ident!("get_{}_le", repr);
+                        quote_spanned! {span=>
+                            let #var = b.#get_value();
+                        }
+                    }
                 });
             }
 
             match ty {
                 Type::Array(ty) => {
-                    if let Ok(PrimitiveKind::U8) = PrimitiveKind::try_from(ty.elem.as_ref().clone()) {
+                    if let Ok(PrimitiveKind::U8) = PrimitiveKind::try_from(ty.elem.as_ref().clone())
+                    {
                         let len = &ty.len;
 
                         Some(quote_spanned! {span=>
@@ -198,8 +193,11 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
                     }
                 }
                 Type::Tuple(ty) => {
-                    let mut item_parse_stmts =
-                        ty.elems.iter().enumerate().filter_map(|(elem_idx, elem_ty)| {
+                    let item_parse_stmts = ty
+                        .elems
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(elem_idx, elem_ty)| {
                             get_parser_for_field(&FieldInfo {
                                 name: format!("{}[{}]", &info.name, elem_idx),
                                 kind: FieldKind::Raw {
@@ -209,11 +207,15 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
                                 variable: format_ident!("{}_{}", &info.variable, elem_idx),
                                 ident: None,
                             })
-                        }).collect::<Vec<_>>();
+                        })
+                        .collect::<Vec<_>>();
 
-                    let mut item_vars = ty.elems.iter().enumerate().map(|(elem_idx, elem_ty)| {
-                        format_ident!("{}_{}", &info.variable, elem_idx)
-                    }).collect::<Vec<_>>();
+                    let item_vars = ty
+                        .elems
+                        .iter()
+                        .enumerate()
+                        .map(|(elem_idx, _)| format_ident!("{}_{}", &info.variable, elem_idx))
+                        .collect::<Vec<_>>();
 
                     if item_vars.len() != item_parse_stmts.len() {
                         // some of the parse statement generations failed, abort

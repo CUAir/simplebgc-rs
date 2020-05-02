@@ -138,7 +138,8 @@ pub struct AxisControlParams {
     /// Units: 0,1220740379 deg./sec.
     /// (0.001 deg./sec., if the CONTROL_FLAG_HIGH_RES_SPEED
     /// is set)
-    #[bgc_raw("SPEED")]
+    #[kind(raw)]
+#[name("SPEED")]
     pub speed: i16,
 
     /// Depends on the MODE parameter:
@@ -147,7 +148,8 @@ pub struct AxisControlParams {
     /// - MODE_RC: encodes RC signal in range -500..500
     /// - MODE_RC_HIGH_RES: encodes RC signal in range -16384..16384
     /// Units: 0,02197265625 degree.
-    #[bgc_raw("ANGLE")]
+    #[kind(raw)]
+#[name("ANGLE")]
     pub angle: i16,
 }
 

@@ -1,9 +1,8 @@
-use std::convert::{TryFrom, TryInto};
+use std::convert::{TryFrom};
 use std::result::Result;
 use syn::{Path, Type, TypePath};
-use proc_macro2::{Span, Ident};
+use proc_macro2::{Ident};
 use quote::IdentFragment;
-use syn::export::Formatter;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PrimitiveKind {
