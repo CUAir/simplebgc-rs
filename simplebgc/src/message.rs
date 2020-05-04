@@ -2,46 +2,21 @@ use crate::commands::constants::*;
 use crate::payload::*;
 use crate::{IncomingCommand, OutgoingCommand};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use std::error::Error;
+use thiserror::Error;
 use std::fmt::{Display, Formatter};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Error, Clone, Debug, PartialEq)]
 pub enum MessageParseError {
+    #[error("bad version code")]
     BadVersionCode,
+    #[error("bad header checksum, expected {expected:#X}, got {actual:#X}")]
     BadHeaderChecksum { expected: u8, actual: u8 },
+    #[error("bad payload checksum, expected {expected:#X}, got {actual:#X}")]
     BadPayloadChecksum { expected: u16, actual: u16 },
+    #[error("there was not enough data in the buffer to read the whole message")]
     InsufficientData,
-    PayloadParse(PayloadParseError),
-}
-
-impl Display for MessageParseError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MessageParseError::BadVersionCode => write!(f, "bad version code"),
-            MessageParseError::BadHeaderChecksum { expected, actual } => write!(
-                f,
-                "bad header checksum, expected {:#X}, got {:#X}",
-                expected, actual
-            ),
-            MessageParseError::BadPayloadChecksum { expected, actual } => write!(
-                f,
-                "bad payload checksum, expected {:#X}, got {:#X}",
-                expected, actual
-            ),
-            MessageParseError::InsufficientData => write!(f, "insufficient data"),
-            MessageParseError::PayloadParse(e) => {
-                write!(f, "payload could not be parsed: {:#?}", e)
-            }
-        }
-    }
-}
-
-impl Error for MessageParseError {}
-
-impl From<PayloadParseError> for MessageParseError {
-    fn from(e: PayloadParseError) -> Self {
-        MessageParseError::PayloadParse(e)
-    }
+    #[error(transparent)]
+    PayloadParse(#[from] PayloadParseError),
 }
 
 pub trait Message {

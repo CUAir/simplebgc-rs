@@ -4,6 +4,8 @@ extern crate num_derive;
 extern crate mashup;
 #[macro_use]
 extern crate simplebgc_derive;
+#[macro_use]
+extern crate thiserror;
 
 #[macro_use]
 mod commands;
