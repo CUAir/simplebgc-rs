@@ -13,4 +13,5 @@ num-traits = "0.2"
 num-derive = "0.3"
 crc16 = "0.4.0"
 mashup = "0.1.9"
+thiserror = "1.0.16"
 simplebgc-derive = { path = "../simplebgc-derive" }

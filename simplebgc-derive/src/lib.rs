@@ -10,6 +10,7 @@ use proc_macro_error::*;
 use quote::{format_ident, quote, quote_spanned};
 use std::convert::TryFrom;
 use syn::*;
+use syn::spanned::Spanned;
 
 mod field;
 mod primitive;
@@ -52,7 +53,7 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
 
                 quote! {
                     impl Payload for #ty {
-                        fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
+                        fn from_bytes(mut _b: Bytes) -> Result<Self, PayloadParseError>
                         where
                             Self: Sized,
                         {
@@ -67,11 +68,12 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
                         where
                             Self: Sized,
                         {
-                            let mut b = BytesMut::new();
+                            let mut _b = BytesMut::new();
+                            let &#ty { #(#vars),* } = self;
 
                             #(#ser_stmts)*
 
-                            b.freeze()
+                            _b.freeze()
                         }
                     }
                 }
@@ -101,7 +103,7 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
 
                 quote! {
                     impl Payload for #ty {
-                        fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
+                        fn from_bytes(mut _b: Bytes) -> Result<Self, PayloadParseError>
                         where
                             Self: Sized,
                         {
@@ -116,11 +118,12 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
                         where
                             Self: Sized,
                         {
-                            let mut b = BytesMut::new();
+                            let mut _b = BytesMut::new();
+                            let &#ty ( #(#vars),* ) = self;
 
                             #(#ser_stmts)*
 
-                            b.freeze()
+                            _b.freeze()
                         }
                     }
                 }
@@ -143,7 +146,7 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
 
     match &info.kind {
         FieldKind::Payload { ty, size } => Some(quote_spanned! {span=>
-            let #var: #ty = Payload::from_bytes(b.split_to(#size))?;
+            let #var: #ty = Payload::from_bytes(_b.split_to(#size))?;
         }),
         FieldKind::Flags { repr } => {
             let get_value = match repr {
@@ -152,7 +155,7 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
             };
 
             Some(quote_spanned! {span=>
-                let #var = BitFlags::from_bits(b.#get_value())
+                let #var = BitFlags::from_bits(_b.#get_value())
                     .or(Err(PayloadParseError::InvalidFlags { name: #name.into() }))?;
             })
         }
@@ -165,7 +168,7 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
             let from_value = format_ident!("from_{}", repr);
 
             Some(quote_spanned! {span=>
-                let #var = FromPrimitive::#from_value(b.#get_value())
+                let #var = FromPrimitive::#from_value(_b.#get_value())
                     .ok_or(PayloadParseError::InvalidEnum { name: #name.into() })?;
             })
         }
@@ -175,19 +178,19 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
                 return Some(match repr {
                     PrimitiveKind::Bool => {
                         quote_spanned! {span=>
-                            let #var = b.get_u8() != 0;
+                            let #var = _b.get_u8() != 0;
                         }
                     }
                     PrimitiveKind::U8 | PrimitiveKind::I8 => {
                         let get_value = format_ident!("get_{}", repr);
                         quote_spanned! {span=>
-                            let #var = b.#get_value();
+                            let #var = _b.#get_value();
                         }
                     }
                     _ => {
                         let get_value = format_ident!("get_{}_le", repr);
                         quote_spanned! {span=>
-                            let #var = b.#get_value();
+                            let #var = _b.#get_value();
                         }
                     }
                 });
@@ -201,7 +204,7 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
 
                         Some(quote_spanned! {span=>
                             let mut #var = [0u8; #len];
-                            b.copy_to_slice(&mut #var[..]);
+                            _b.copy_to_slice(&mut #var[..]);
                         })
                     } else {
                         emit_error!(ty, ERR_RAW_PRIMITIVE);
@@ -214,11 +217,13 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
                         .iter()
                         .enumerate()
                         .filter_map(|(elem_idx, elem_ty)| {
+                            // recursion ftw
                             get_parser_for_field(&FieldInfo {
                                 name: format!("{}[{}]", &info.name, elem_idx),
                                 kind: FieldKind::Raw {
                                     ty: (*elem_ty).clone(),
                                 },
+                                idx: elem_idx,
                                 span: info.span.clone(),
                                 variable: format_ident!("{}_{}", &info.variable, elem_idx),
                                 ident: None,
@@ -257,18 +262,10 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
 fn get_serializer_for_field(info: &FieldInfo) -> Option<TokenStream2> {
     let var = &info.variable;
     let span = info.span;
-    let name = &info.name;
-    let ident = &info.ident;
-
-    if ident.is_none() {
-        return Some(quote! {
-            unimplemented!("tuple structs can't be serialized yet");
-        });
-    }
 
     match &info.kind {
         FieldKind::Payload { ty, size } => Some(quote_spanned! {span=>
-            b.put(Payload::to_bytes(&self.#ident));
+            _b.put(Payload::to_bytes(&#var));
         }),
         FieldKind::Flags { repr } => {
             let put_value = match repr {
@@ -277,7 +274,7 @@ fn get_serializer_for_field(info: &FieldInfo) -> Option<TokenStream2> {
             };
 
             Some(quote_spanned! {span=>
-                b.#put_value(self.#ident.bits());
+                _b.#put_value(#var.bits());
             })
         }
         FieldKind::Enum { repr } => {
@@ -289,7 +286,7 @@ fn get_serializer_for_field(info: &FieldInfo) -> Option<TokenStream2> {
             let to_value = format_ident!("to_{}", repr);
 
             Some(quote_spanned! {span=>
-                b.#put_value(ToPrimitive::#to_value(&self.#ident).unwrap());
+                _b.#put_value(ToPrimitive::#to_value(&#var).unwrap());
             })
         }
         FieldKind::Raw { ty } => {
@@ -298,20 +295,20 @@ fn get_serializer_for_field(info: &FieldInfo) -> Option<TokenStream2> {
                 return Some(match repr {
                     PrimitiveKind::Bool => {
                         quote_spanned! {span=>
-                            b.put_u8(self.#ident as u8);
+                            _b.put_u8(#var as u8);
                         }
                     }
                     PrimitiveKind::U8 | PrimitiveKind::I8 => {
                         let put_value = format_ident!("put_{}", repr);
                         quote_spanned! {span=>
-                            b.#put_value(self.#ident);
+                            _b.#put_value(#var);
                         }
                     }
                     _ => {
                         let put_value = format_ident!("put_{}_le", repr);
                         let repr = format_ident!("{}", repr);
                         quote_spanned! {span=>
-                            b.#put_value(self.#ident as #repr);
+                            _b.#put_value(#var as #repr);
                         }
                     }
                 });
@@ -321,15 +318,49 @@ fn get_serializer_for_field(info: &FieldInfo) -> Option<TokenStream2> {
                     if let Ok(PrimitiveKind::U8) = PrimitiveKind::try_from(ty.elem.as_ref().clone())
                     {
                         Some(quote_spanned! {span=>
-                            b.copy_from_slice(&self.#ident[..]);
+                            _b.copy_from_slice(&#var[..]);
                         })
                     } else {
                         None
                     }
                 }
                 Type::Tuple(ty) => {
+                    let item_ser_stmts = ty
+                        .elems
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(elem_idx, elem_ty)| {
+                            // recursion ftw
+                            get_serializer_for_field(&FieldInfo {
+                                name: format!("{}[{}]", &info.name, elem_idx),
+                                kind: FieldKind::Raw {
+                                    ty: (*elem_ty).clone(),
+                                },
+                                idx: elem_idx,
+                                span: elem_ty.span(),
+                                variable: format_ident!("{}_{}", &info.variable, elem_idx),
+                                ident: None,
+                            })
+                        })
+                        .collect::<Vec<_>>();
+
+                    let item_vars = ty
+                        .elems
+                        .iter()
+                        .enumerate()
+                        .map(|(elem_idx, _)| format_ident!("{}_{}", &info.variable, elem_idx))
+                        .collect::<Vec<_>>();
+
+                    if item_vars.len() != item_ser_stmts.len() {
+                        // some of the parse statement generations failed, abort
+                        return None;
+                    }
+
                     Some(quote_spanned! {span=>
-                        unimplemented!("tuple values can't be serialized yet");
+                        {
+                            let (#(#item_vars),*) = #var;
+                            #(#item_ser_stmts)*
+                        };
                     })
                 }
                 _ => {

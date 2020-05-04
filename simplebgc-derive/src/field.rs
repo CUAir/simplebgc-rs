@@ -19,7 +19,8 @@ pub struct FieldInfo {
     pub ident: Option<Ident>,
     pub variable: Ident,
     pub name: String,
-    pub span: Span
+    pub span: Span,
+    pub idx: usize
 }
 
 pub fn get_info_for_field(idx: usize, field: &Field) -> Option<FieldInfo> {
@@ -132,7 +133,7 @@ pub fn get_info_for_field(idx: usize, field: &Field) -> Option<FieldInfo> {
                 return None;
             }
         })
-        .or(field.ident.clone().map(|i| i.to_string()));
+        .or(field.ident.clone().map(|i| i.to_string().to_uppercase()));
 
     let name = match name {
         Some(name) => name,
@@ -147,6 +148,7 @@ pub fn get_info_for_field(idx: usize, field: &Field) -> Option<FieldInfo> {
 
     Some(FieldInfo {
         kind,
+        idx,
         ident: field.ident.clone(),
         name,
         variable,

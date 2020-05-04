@@ -1,25 +1,14 @@
 use bytes::{Buf, Bytes};
-use std::error::Error;
+use thiserror::Error;
 use std::fmt::{Display, Formatter};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Error, Clone, Debug, PartialEq)]
 pub enum PayloadParseError {
+    #[error("invalid flags value for {name}")]
     InvalidFlags { name: String },
+    #[error("invalid enum value for {name}")]
     InvalidEnum { name: String },
 }
-
-impl Display for PayloadParseError {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PayloadParseError::InvalidFlags { name } => {
-                write!(f, "invalid flags value for {}", name)
-            }
-            PayloadParseError::InvalidEnum { name } => write!(f, "invalid enum value for {}", name),
-        }
-    }
-}
-
-impl Error for PayloadParseError {}
 
 pub trait Payload {
     /// Parses this payload from bytes according to the SimpleBGC spec.

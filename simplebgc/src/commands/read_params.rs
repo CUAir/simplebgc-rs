@@ -92,8 +92,9 @@ pub enum RcVirtMode {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum RcMap {
+    None,
     PWM { source: RcMapPwmSource },
-    Analog { channel: u8 },
+    Analog { channel: RcMapAnalogChannel },
     Serial { channel: u8 },
     Virtual { channel: u8 },
     Step { channel: u8 },
@@ -123,25 +124,48 @@ impl FromPrimitive for RcMap {
     }
 
     fn from_u8(b: u8) -> Option<Self> {
-        let chan = b & 0b11111;
+        if b == 0 { return Some(RcMap::None) }
+
+        let channel = b & 0b11111;
         let kind = (b & 0b00000111) >> 5;
 
         Some(match kind {
             0 => RcMap::PWM {
-                source: FromPrimitive::from_u8(chan)?,
+                source: FromPrimitive::from_u8(channel)?,
             },
             1 => RcMap::Analog {
-                channel: FromPrimitive::from_u8(chan)?,
+                channel: FromPrimitive::from_u8(channel)?,
             },
-            2 => RcMap::Serial { channel: chan },
-            4 => RcMap::Virtual { channel: chan },
-            5 => RcMap::Step { channel: chan },
+            2 => RcMap::Serial { channel },
+            4 => RcMap::Virtual { channel },
+            5 => RcMap::Step { channel },
             _ => return None,
         })
     }
 
     fn from_u64(n: u64) -> Option<Self> {
         FromPrimitive::from_u8(n as u8)
+    }
+}
+
+impl ToPrimitive for RcMap {
+    fn to_i64(&self) -> Option<i64> {
+        self.to_u8().map(|u| u as i64)
+    }
+
+    fn to_u8(&self) -> Option<u8> {
+        Some(match self {
+            RcMap::None => 0,
+            RcMap::PWM { source } => ToPrimitive::to_u8(source)?,
+            RcMap::Analog { channel } => 0b00100000 | ToPrimitive::to_u8(channel)?,
+            RcMap::Serial { channel } => 0b01000000 | *channel,
+            RcMap::Virtual { channel } => 0b10000000 | *channel,
+            RcMap::Step { channel } => 0b10100000 | *channel,
+        })
+    }
+
+    fn to_u64(&self) -> Option<u64> {
+        self.to_u8().map(|u| u as u64)
     }
 }
 
@@ -324,50 +348,17 @@ pub enum SpektrumModeBits {
     Long,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 pub enum SpektrumMode {
-    Auto,
-    Mode(SpektrumModeDSM, SpektrumModeTime, SpektrumModeBits),
-}
-
-impl FromPrimitive for SpektrumMode {
-    fn from_i64(n: i64) -> Option<Self> {
-        FromPrimitive::from_u8(n as u8)
-    }
-
-    fn from_u8(b: u8) -> Option<Self> {
-        if b == 0 {
-            Some(SpektrumMode::Auto)
-        } else {
-            let value = b - 1;
-            if value > 7 {
-                // no valid values here
-                None
-            } else {
-                Some(SpektrumMode::Mode(
-                    if value & 4 == 4 {
-                        SpektrumModeDSM::DSMX
-                    } else {
-                        SpektrumModeDSM::DSM2
-                    },
-                    if value & 2 == 2 {
-                        SpektrumModeTime::Long
-                    } else {
-                        SpektrumModeTime::Short
-                    },
-                    if value & 1 == 1 {
-                        SpektrumModeBits::Long
-                    } else {
-                        SpektrumModeBits::Short
-                    },
-                ))
-            }
-        }
-    }
-
-    fn from_u64(n: u64) -> Option<Self> {
-        FromPrimitive::from_u8(n as u8)
-    }
+    Auto = 0,
+    DSM2Short10,
+    DSM2Short11,
+    DSM2Long10,
+    DSM2Long11,
+    DSMXShort10,
+    DSMXShort11,
+    DSMXLong10,
+    DSMXLong11,
 }
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
