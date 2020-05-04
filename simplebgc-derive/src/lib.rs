@@ -5,7 +5,7 @@ extern crate quote;
 use crate::field::*;
 use crate::primitive::*;
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{TokenStream as TokenStream2};
 use proc_macro_error::*;
 use quote::{format_ident, quote, quote_spanned};
 use std::convert::TryFrom;
@@ -21,7 +21,7 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let ty = input.ident;
 
-    match input.data {
+    dummy_const_trick(&ty, match input.data {
         Data::Struct(data) => match data.fields {
             Fields::Named(fields) => {
                 let fields_info = fields
@@ -132,8 +132,28 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
         },
         Data::Enum(_) => unimplemented!(),
         Data::Union(_) => unimplemented!(),
-    }
+    })
     .into()
+}
+
+// This trick is taken from num_traits:
+// https://github.com/rust-num/num-derive/blob/bafa54c551a9c89d005eb9a41d015a6cca6b614f/src/lib.rs#L49
+fn dummy_const_trick<T: quote::ToTokens>(
+    name: &Ident,
+    exp: T,
+) -> TokenStream2 {
+    let dummy_const = format_ident!("__IMPL_PAYLOAD_FOR_{}", name);
+    quote! {
+        #[allow(non_upper_case_globals, unused_qualifications)]
+        const #dummy_const: () = {
+            use bytes::{Bytes, BytesMut, Buf, BufMut};
+            #[allow(unused_imports)]
+            use enumflags2::{BitFlags};
+            #[allow(unused_imports)]
+            use num_traits::{FromPrimitive, ToPrimitive};
+            #exp
+        };
+    }
 }
 
 const ERR_RAW_PRIMITIVE: &str =
@@ -264,7 +284,7 @@ fn get_serializer_for_field(info: &FieldInfo) -> Option<TokenStream2> {
     let span = info.span;
 
     match &info.kind {
-        FieldKind::Payload { ty, size } => Some(quote_spanned! {span=>
+        FieldKind::Payload { .. } => Some(quote_spanned! {span=>
             _b.put(Payload::to_bytes(&#var));
         }),
         FieldKind::Flags { repr } => {

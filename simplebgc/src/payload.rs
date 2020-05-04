@@ -1,6 +1,5 @@
 use bytes::{Buf, Bytes};
 use thiserror::Error;
-use std::fmt::{Display, Formatter};
 
 #[derive(Error, Clone, Debug, PartialEq)]
 pub enum PayloadParseError {

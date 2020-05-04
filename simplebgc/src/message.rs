@@ -3,7 +3,6 @@ use crate::payload::*;
 use crate::{IncomingCommand, OutgoingCommand};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use thiserror::Error;
-use std::fmt::{Display, Formatter};
 
 #[derive(Error, Clone, Debug, PartialEq)]
 pub enum MessageParseError {

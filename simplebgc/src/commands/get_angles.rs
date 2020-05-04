@@ -1,6 +1,5 @@
 use crate::{Payload, PayloadParseError, RollPitchYaw};
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-use enumflags2::BitFlags;
+use bytes::{BufMut, Bytes, BytesMut};
 
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct AngleInfo {

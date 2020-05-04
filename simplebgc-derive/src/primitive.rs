@@ -1,7 +1,7 @@
 use std::convert::{TryFrom};
 use std::result::Result;
 use syn::{Path, Type, TypePath};
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::{Ident};
 use quote::{IdentFragment};
 use std::fmt::Display;
 

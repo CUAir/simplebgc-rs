@@ -15,8 +15,7 @@ pub use self::motors_off::*;
 pub use self::read_params::*;
 
 use crate::{Payload, PayloadParseError};
-use bytes::{Buf, BufMut, Bytes, BytesMut};
-use enumflags2::BitFlags;
+use bytes::{BufMut, Bytes, BytesMut};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RollPitchYaw<T> {
