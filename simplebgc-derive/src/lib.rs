@@ -410,7 +410,7 @@ fn get_serializer_for_field(info: &FieldInfo) -> Option<TokenStream2> {
                     if let Ok(PrimitiveKind::U8) = PrimitiveKind::try_from(ty.elem.as_ref().clone())
                     {
                         Some(quote_spanned! {span=>
-                            _b.copy_from_slice(&#var[..]);
+                            _b.extend_from_slice(&#var[..]);
                         })
                     } else {
                         None
