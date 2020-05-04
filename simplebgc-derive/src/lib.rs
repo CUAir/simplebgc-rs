@@ -1,3 +1,74 @@
+//! # `simplebgc-derive`
+//! This crate contains the derive macro that is used to take a lot of the drudgery out of
+//! serializing/deserializing these structures. Here's how it it works:
+//!
+//! ## `#[derive(BgcPayload)]`
+//! Add this to any structure that represents a payload
+//! for a SimpleBGC command. If a command contains repeated data, you can consider these as
+//! "sub-payloads" and refactor them into their own structure.
+//!
+//! ## `#[kind]`
+//! This helper attribute must be present on every member of a `BgcPayload` struct. It will
+//! tell the derive macro how to process this member.
+//!
+//! ### `#[kind(enumeration)]`
+//! Indicates that this struct member is an enum. The member's type must implement
+//! [`num_traits::FromPrimitive`](https://docs.rs/num-traits/0.2.11/num_traits/cast/trait.FromPrimitive.html)
+//! and [`num_traits::ToPrimitive`](https://docs.rs/num-traits/0.2.11/num_traits/cast/trait.ToPrimitive.html).
+//!
+//! ### `#[kind(flags)]`
+//! Indicates that this struct member is a bit field. The member's type must be an
+//! [`enumflags2::BitFlags<T>`](https://docs.rs/enumflags2/0.6.4/enumflags2/struct.BitFlags.html).
+//!
+//! ### `#[kind(payload)]`
+//! Indicates that this struct member is a sub-payload. The member's type must implement
+//! [`simplebgc::payload`].
+//!
+//! ### `#[kind(raw)]`
+//! Indicates that this struct member is a primitive value. The member's type must be a primitive
+//! integer, boolean, array of `u8`, or tuple of primitives.
+//!
+//! ## `#[size]`
+//! This helper attribute specifies the number of bytes that a sub-payload takes up in the
+//! serialized representation, so that it can be known how many bytes to split off and give
+//! to `Payload::from_bytes`. It is required for members with `kind(payload)` and has
+//! no effect for all others. It accepts one argument: a number representing the size of this
+//! sub-payload.
+//!
+//! ```no_run
+//! # struct Example {
+//! #[kind(payload)]
+//! #[size(18)]
+//! pub pid: RollPitchYaw<AxisPidParams>,
+//! # }
+//! ```
+//!
+//! ## `#[format]`
+//! This helper attribute specifies the underlying representation of enum and flags members.
+//! It takes one argument: a type, which must be a primitive integer type (`u8`, `i8`, `u16`, etc.).
+//! ```no_run
+//! # struct Example {
+//!     #[kind(enumeration)]
+//!     #[format(u8)]
+//!     pub serial_speed: SerialSpeed,
+//! # }
+//! ```
+//!
+//! ## `#[name]`
+//! This helper attribute specifies the name of this item as specified in the SimpleBGC spec.
+//! This is to be used in error messages in case deserialization fails. If it is not provided,
+//! it is assumed that the spec name is the same as the member name. This attribute is required
+//! for members of tuple structs.
+//!
+//! ```no_run
+//! # struct Example {
+//!     #[kind(enumeration)]
+//!     #[name("RC_MAP_FC_ROLL")]
+//!     #[format(u8)]
+//!     pub fc_roll: RcMap,
+//! # }
+//! ```
+
 extern crate proc_macro;
 extern crate proc_macro_error;
 extern crate quote;
@@ -5,12 +76,12 @@ extern crate quote;
 use crate::field::*;
 use crate::primitive::*;
 use proc_macro::TokenStream;
-use proc_macro2::{TokenStream as TokenStream2};
+use proc_macro2::TokenStream as TokenStream2;
 use proc_macro_error::*;
 use quote::{format_ident, quote, quote_spanned};
 use std::convert::TryFrom;
-use syn::*;
 use syn::spanned::Spanned;
+use syn::*;
 
 mod field;
 mod primitive;
@@ -21,127 +92,127 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let ty = input.ident;
 
-    dummy_const_trick(&ty, match input.data {
-        Data::Struct(data) => match data.fields {
-            Fields::Named(fields) => {
-                let fields_info = fields
-                    .named
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(i, field)| get_info_for_field(i, field))
-                    .collect::<Vec<_>>();
+    dummy_const_trick(
+        &ty,
+        match input.data {
+            Data::Struct(data) => match data.fields {
+                Fields::Named(fields) => {
+                    let fields_info = fields
+                        .named
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(i, field)| get_info_for_field(i, field))
+                        .collect::<Vec<_>>();
 
-                let parse_stmts = fields_info
-                    .iter()
-                    .filter_map(|info| get_parser_for_field(&info))
-                    .collect::<Vec<_>>();
+                    let parse_stmts = fields_info
+                        .iter()
+                        .filter_map(|info| get_parser_for_field(&info))
+                        .collect::<Vec<_>>();
 
-                let ser_stmts = fields_info
-                    .iter()
-                    .filter_map(|info| get_serializer_for_field(&info))
-                    .collect::<Vec<_>>();
+                    let ser_stmts = fields_info
+                        .iter()
+                        .filter_map(|info| get_serializer_for_field(&info))
+                        .collect::<Vec<_>>();
 
-                let vars = fields_info
-                    .iter()
-                    .map(|info| &info.variable)
-                    .collect::<Vec<_>>();
+                    let vars = fields_info
+                        .iter()
+                        .map(|info| &info.variable)
+                        .collect::<Vec<_>>();
 
-                let fields = fields_info
-                    .iter()
-                    .map(|info| (&info.ident).as_ref().unwrap())
-                    .collect::<Vec<_>>();
+                    let fields = fields_info
+                        .iter()
+                        .map(|info| (&info.ident).as_ref().unwrap())
+                        .collect::<Vec<_>>();
 
-                quote! {
-                    impl Payload for #ty {
-                        fn from_bytes(mut _b: Bytes) -> Result<Self, PayloadParseError>
-                        where
-                            Self: Sized,
-                        {
-                            #(#parse_stmts)*
+                    quote! {
+                        impl Payload for #ty {
+                            fn from_bytes(mut _b: Bytes) -> Result<Self, PayloadParseError>
+                            where
+                                Self: Sized,
+                            {
+                                #(#parse_stmts)*
 
-                            Ok(#ty {
-                                #(#fields: #vars),*
-                            })
-                        }
+                                Ok(#ty {
+                                    #(#fields: #vars),*
+                                })
+                            }
 
-                        fn to_bytes(&self) -> Bytes
-                        where
-                            Self: Sized,
-                        {
-                            let mut _b = BytesMut::new();
-                            let &#ty { #(#vars),* } = self;
+                            fn to_bytes(&self) -> Bytes
+                            where
+                                Self: Sized,
+                            {
+                                let mut _b = BytesMut::new();
+                                let &#ty { #(#vars),* } = self;
 
-                            #(#ser_stmts)*
+                                #(#ser_stmts)*
 
-                            _b.freeze()
-                        }
-                    }
-                }
-            }
-            Fields::Unnamed(fields) => {
-                let fields_info: Vec<_> = fields
-                    .unnamed
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(i, field)| get_info_for_field(i, field))
-                    .collect();
-
-                let parse_stmts: Vec<_> = fields_info
-                    .iter()
-                    .filter_map(|info| get_parser_for_field(&info))
-                    .collect();
-
-                let ser_stmts = fields_info
-                    .iter()
-                    .filter_map(|info| get_serializer_for_field(&info))
-                    .collect::<Vec<_>>();
-
-                let vars = fields_info
-                    .iter()
-                    .map(|info| &info.variable)
-                    .collect::<Vec<_>>();
-
-                quote! {
-                    impl Payload for #ty {
-                        fn from_bytes(mut _b: Bytes) -> Result<Self, PayloadParseError>
-                        where
-                            Self: Sized,
-                        {
-                            #(#parse_stmts)*
-
-                            Ok(#ty (
-                                #(#vars),*
-                            ))
-                        }
-
-                        fn to_bytes(&self) -> Bytes
-                        where
-                            Self: Sized,
-                        {
-                            let mut _b = BytesMut::new();
-                            let &#ty ( #(#vars),* ) = self;
-
-                            #(#ser_stmts)*
-
-                            _b.freeze()
+                                _b.freeze()
+                            }
                         }
                     }
                 }
-            }
-            Fields::Unit => abort!(data.struct_token, "this does not work on unit structs"),
+                Fields::Unnamed(fields) => {
+                    let fields_info: Vec<_> = fields
+                        .unnamed
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(i, field)| get_info_for_field(i, field))
+                        .collect();
+
+                    let parse_stmts: Vec<_> = fields_info
+                        .iter()
+                        .filter_map(|info| get_parser_for_field(&info))
+                        .collect();
+
+                    let ser_stmts = fields_info
+                        .iter()
+                        .filter_map(|info| get_serializer_for_field(&info))
+                        .collect::<Vec<_>>();
+
+                    let vars = fields_info
+                        .iter()
+                        .map(|info| &info.variable)
+                        .collect::<Vec<_>>();
+
+                    quote! {
+                        impl Payload for #ty {
+                            fn from_bytes(mut _b: Bytes) -> Result<Self, PayloadParseError>
+                            where
+                                Self: Sized,
+                            {
+                                #(#parse_stmts)*
+
+                                Ok(#ty (
+                                    #(#vars),*
+                                ))
+                            }
+
+                            fn to_bytes(&self) -> Bytes
+                            where
+                                Self: Sized,
+                            {
+                                let mut _b = BytesMut::new();
+                                let &#ty ( #(#vars),* ) = self;
+
+                                #(#ser_stmts)*
+
+                                _b.freeze()
+                            }
+                        }
+                    }
+                }
+                Fields::Unit => abort!(data.struct_token, "this does not work on unit structs"),
+            },
+            Data::Enum(_) => unimplemented!(),
+            Data::Union(_) => unimplemented!(),
         },
-        Data::Enum(_) => unimplemented!(),
-        Data::Union(_) => unimplemented!(),
-    })
-    .into()
+    )
+        .into()
 }
 
 // This trick is taken from num_traits:
 // https://github.com/rust-num/num-derive/blob/bafa54c551a9c89d005eb9a41d015a6cca6b614f/src/lib.rs#L49
-fn dummy_const_trick<T: quote::ToTokens>(
-    name: &Ident,
-    exp: T,
-) -> TokenStream2 {
+fn dummy_const_trick<T: quote::ToTokens>(name: &Ident, exp: T) -> TokenStream2 {
     let dummy_const = format_ident!("__IMPL_PAYLOAD_FOR_{}", name);
     quote! {
         #[allow(non_upper_case_globals, unused_qualifications)]

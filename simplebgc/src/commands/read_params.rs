@@ -445,7 +445,6 @@ pub struct Params3Data {
     /// profile ID to read or write. To access current (active) profile,
     /// specify 255. Possible values: 0..4
     #[kind(raw)]
-    #[name("PROFILE_ID")]
     pub profile_id: u8,
 
     #[kind(payload)]
