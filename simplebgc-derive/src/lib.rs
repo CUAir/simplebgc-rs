@@ -1,73 +1,6 @@
 //! # `simplebgc-derive`
 //! This crate contains the derive macro that is used to take a lot of the drudgery out of
-//! serializing/deserializing these structures. Here's how it it works:
-//!
-//! ## `#[derive(BgcPayload)]`
-//! Add this to any structure that represents a payload
-//! for a SimpleBGC command. If a command contains repeated data, you can consider these as
-//! "sub-payloads" and refactor them into their own structure.
-//!
-//! ## `#[kind]`
-//! This helper attribute must be present on every member of a `BgcPayload` struct. It will
-//! tell the derive macro how to process this member.
-//!
-//! ### `#[kind(enumeration)]`
-//! Indicates that this struct member is an enum. The member's type must implement
-//! [`num_traits::FromPrimitive`](https://docs.rs/num-traits/0.2.11/num_traits/cast/trait.FromPrimitive.html)
-//! and [`num_traits::ToPrimitive`](https://docs.rs/num-traits/0.2.11/num_traits/cast/trait.ToPrimitive.html).
-//!
-//! ### `#[kind(flags)]`
-//! Indicates that this struct member is a bit field. The member's type must be an
-//! [`enumflags2::BitFlags<T>`](https://docs.rs/enumflags2/0.6.4/enumflags2/struct.BitFlags.html).
-//!
-//! ### `#[kind(payload)]`
-//! Indicates that this struct member is a sub-payload. The member's type must implement
-//! [`simplebgc::payload`].
-//!
-//! ### `#[kind(raw)]`
-//! Indicates that this struct member is a primitive value. The member's type must be a primitive
-//! integer, boolean, array of `u8`, or tuple of primitives.
-//!
-//! ## `#[size]`
-//! This helper attribute specifies the number of bytes that a sub-payload takes up in the
-//! serialized representation, so that it can be known how many bytes to split off and give
-//! to `Payload::from_bytes`. It is required for members with `kind(payload)` and has
-//! no effect for all others. It accepts one argument: a number representing the size of this
-//! sub-payload.
-//!
-//! ```no_run
-//! # struct Example {
-//! #[kind(payload)]
-//! #[size(18)]
-//! pub pid: RollPitchYaw<AxisPidParams>,
-//! # }
-//! ```
-//!
-//! ## `#[format]`
-//! This helper attribute specifies the underlying representation of enum and flags members.
-//! It takes one argument: a type, which must be a primitive integer type (`u8`, `i8`, `u16`, etc.).
-//! ```no_run
-//! # struct Example {
-//!     #[kind(enumeration)]
-//!     #[format(u8)]
-//!     pub serial_speed: SerialSpeed,
-//! # }
-//! ```
-//!
-//! ## `#[name]`
-//! This helper attribute specifies the name of this item as specified in the SimpleBGC spec.
-//! This is to be used in error messages in case deserialization fails. If it is not provided,
-//! it is assumed that the spec name is the same as the member name. This attribute is required
-//! for members of tuple structs.
-//!
-//! ```no_run
-//! # struct Example {
-//!     #[kind(enumeration)]
-//!     #[name("RC_MAP_FC_ROLL")]
-//!     #[format(u8)]
-//!     pub fc_roll: RcMap,
-//! # }
-//! ```
+//! serializing/deserializing these structures. See [derive.BgcPayload] for more info.
 
 extern crate proc_macro;
 extern crate proc_macro_error;
@@ -86,6 +19,74 @@ use syn::*;
 mod field;
 mod primitive;
 
+
+/// Add this to any structure that represents a payload
+/// for a SimpleBGC command.
+///
+/// If a command contains repeated data, you can consider these as
+/// "sub-payloads" and refactor them into their own structure.
+///
+/// ## `#[kind]`
+/// This helper attribute must be present on every member of a `BgcPayload` struct. It will
+/// tell the derive macro how to process this member.
+///
+/// ### `#[kind(enumeration)]`
+/// Indicates that this struct member is an enum. The member's type must implement
+/// [`num_traits::FromPrimitive`](https://docs.rs/num-traits/0.2.11/num_traits/cast/trait.FromPrimitive.html)
+/// and [`num_traits::ToPrimitive`](https://docs.rs/num-traits/0.2.11/num_traits/cast/trait.ToPrimitive.html).
+///
+/// ### `#[kind(flags)]`
+/// Indicates that this struct member is a bit field. The member's type must be an
+/// [`enumflags2::BitFlags<T>`](https://docs.rs/enumflags2/0.6.4/enumflags2/struct.BitFlags.html).
+///
+/// ### `#[kind(payload)]`
+/// Indicates that this struct member is a sub-payload. The member's type must implement
+/// [`simplebgc::payload`].
+///
+/// ### `#[kind(raw)]`
+/// Indicates that this struct member is a primitive value. The member's type must be a primitive
+/// integer, boolean, array of `u8`, or tuple of primitives.
+///
+/// ## `#[size]`
+/// This helper attribute specifies the number of bytes that a sub-payload takes up in the
+/// serialized representation, so that it can be known how many bytes to split off and give
+/// to `Payload::from_bytes`. It is required for members with `kind(payload)` and has
+/// no effect for all others. It accepts one argument: a number representing the size of this
+/// sub-payload.
+///
+/// ```no_run
+/// # struct Example {
+/// #[kind(payload)]
+/// #[size(18)]
+/// pub pid: RollPitchYaw<AxisPidParams>,
+/// # }
+/// ```
+///
+/// ## `#[format]`
+/// This helper attribute specifies the underlying representation of enum and flags members.
+/// It takes one argument: a type, which must be a primitive integer type (`u8`, `i8`, `u16`, etc.).
+/// ```no_run
+/// # struct Example {
+///     #[kind(enumeration)]
+///     #[format(u8)]
+///     pub serial_speed: SerialSpeed,
+/// # }
+/// ```
+///
+/// ## `#[name]`
+/// This helper attribute specifies the name of this item as specified in the SimpleBGC spec.
+/// This is to be used in error messages in case deserialization fails. If it is not provided,
+/// it is assumed that the spec name is the same as the member name. This attribute is required
+/// for members of tuple structs.
+///
+/// ```no_run
+/// # struct Example {
+///     #[kind(enumeration)]
+///     #[name("RC_MAP_FC_ROLL")]
+///     #[format(u8)]
+///     pub fc_roll: RcMap,
+/// # }
+/// ```
 #[proc_macro_error]
 #[proc_macro_derive(BgcPayload, attributes(kind, size, name, format))]
 pub fn payload_derive(input: TokenStream) -> TokenStream {
