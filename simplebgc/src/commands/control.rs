@@ -157,8 +157,8 @@ payload_rpy!(AxisControlParams, 4);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ControlData {
-    mode: ControlFormat,
-    axes: RollPitchYaw<AxisControlParams>,
+    pub mode: ControlFormat,
+    pub axes: RollPitchYaw<AxisControlParams>,
 }
 
 impl Payload for ControlData {
