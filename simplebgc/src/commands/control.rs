@@ -8,7 +8,7 @@ pub enum ControlFormat {
     /// Mode is common for all axes
     Legacy(AxisControlState),
     /// Mode is per-axis
-    Extended(AxisControlState, AxisControlState, AxisControlState),
+    Extended(RollPitchYaw<AxisControlState>),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -170,11 +170,11 @@ impl Payload for ControlData {
             mode: if b.remaining() < 15 {
                 ControlFormat::Legacy(read_enum!(b, "CONTROL_MODE", u8)?)
             } else {
-                ControlFormat::Extended(
-                    read_enum!(b, "CONTROL_MODE[0]", u8)?,
-                    read_enum!(b, "CONTROL_MODE[1]", u8)?,
-                    read_enum!(b, "CONTROL_MODE[2]", u8)?,
-                )
+                ControlFormat::Extended(RollPitchYaw {
+                    roll: read_enum!(b, "CONTROL_MODE[0]", u8)?,
+                    pitch: read_enum!(b, "CONTROL_MODE[1]", u8)?,
+                    yaw: read_enum!(b, "CONTROL_MODE[2]", u8)?,
+                })
             },
             axes: Payload::from_bytes(b)?,
         })
