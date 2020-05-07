@@ -6,13 +6,13 @@ use num_traits::FromPrimitive;
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ControlFormat {
     /// Mode is common for all axes
-    Legacy(AxisControl),
+    Legacy(AxisControlState),
     /// Mode is per-axis
-    Extended(AxisControl, AxisControl, AxisControl),
+    Extended(AxisControlState, AxisControlState, AxisControlState),
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct AxisControl {
+pub struct AxisControlState {
     pub mode: AxisControlMode,
     pub flags: BitFlags<AxisControlFlags>,
 }
@@ -104,13 +104,13 @@ pub enum AxisControlFlags {
     HighResSpeed = 1 << 7,
 }
 
-impl FromPrimitive for AxisControl {
+impl FromPrimitive for AxisControlState {
     fn from_i64(n: i64) -> Option<Self> {
         Self::from_u8(n as u8)
     }
 
     fn from_u8(n: u8) -> Option<Self> {
-        Some(AxisControl {
+        Some(AxisControlState {
             mode: FromPrimitive::from_u8(n)?,
             flags: BitFlags::from_bits_truncate(n),
         })
