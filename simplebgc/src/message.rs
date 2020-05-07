@@ -8,6 +8,8 @@ use thiserror::Error;
 pub enum MessageParseError {
     #[error("bad version code")]
     BadVersionCode,
+    #[error("bad command id: {id}")]
+    BadCommandId { id: u8 },
     #[error("bad header checksum, expected {expected:#X}, got {actual:#X}")]
     BadHeaderChecksum { expected: u8, actual: u8 },
     #[error("bad payload checksum, expected {expected:#X}, got {actual:#X}")]
@@ -88,6 +90,11 @@ pub trait Message {
 
         // assume version byte was already checked
         let cmd = buf[1];
+
+        if cmd == 0 {
+            return Err(MessageParseError::BadCommandId { id: cmd });
+        }
+
         let payload_len = buf[2] as usize;
         let expected_header_checksum = buf[3];
         let header_checksum = cmd.wrapping_add(payload_len as u8);
@@ -126,6 +133,11 @@ pub trait Message {
 
         // assume version byte was already checked
         let cmd = buf[1];
+
+        if cmd == 0 {
+            return Err(MessageParseError::BadCommandId { id: cmd });
+        }
+
         let payload_len = buf[2] as usize;
         let expected_header_checksum = buf[3];
         let header_checksum = cmd.wrapping_add(payload_len as u8);
@@ -232,7 +244,7 @@ impl Message for OutgoingCommand {
                     None
                 },
             },
-            _ => Other { id },
+            _ => return Err(MessageParseError::BadCommandId { id }),
         })
     }
 }

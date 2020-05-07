@@ -6,6 +6,8 @@ extern crate mashup;
 extern crate simplebgc_derive;
 
 #[macro_use]
+mod data;
+#[macro_use]
 mod commands;
 mod message;
 mod payload;
@@ -13,3 +15,4 @@ mod payload;
 pub use commands::*;
 pub use message::*;
 pub use payload::*;
+pub use data::*;

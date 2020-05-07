@@ -153,7 +153,7 @@ pub struct AxisControlParams {
     pub angle: i16,
 }
 
-rpy_payload!(AxisControlParams, 4);
+payload_rpy!(AxisControlParams, 4);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ControlData {

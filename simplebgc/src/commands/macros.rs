@@ -42,32 +42,3 @@ macro_rules! read_flags_truncate {
         }
     }};
 }
-
-#[macro_export]
-macro_rules! rpy_payload {
-    ($type: ty, $size: literal) => {
-        impl Payload for RollPitchYaw<$type> {
-            fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
-            where
-                Self: Sized,
-            {
-                Ok(RollPitchYaw {
-                    roll: Payload::from_bytes(b.split_to($size))?,
-                    pitch: Payload::from_bytes(b.split_to($size))?,
-                    yaw: Payload::from_bytes(b.split_to($size))?,
-                })
-            }
-
-            fn to_bytes(&self) -> Bytes
-            where
-                Self: Sized,
-            {
-                let mut b = BytesMut::with_capacity($size * 3);
-                b.put(Payload::to_bytes(&self.roll));
-                b.put(Payload::to_bytes(&self.pitch));
-                b.put(Payload::to_bytes(&self.yaw));
-                b.freeze()
-            }
-        }
-    };
-}

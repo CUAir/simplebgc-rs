@@ -22,4 +22,4 @@ pub struct AngleInfo {
     pub target_speed: i32,
 }
 
-rpy_payload!(AngleInfo, 4);
+payload_rpy!(AngleInfo, 4);
