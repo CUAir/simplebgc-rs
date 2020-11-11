@@ -222,8 +222,13 @@ impl Message for OutgoingCommand {
             BoardInfo3 => Bytes::default(),
             Control(data) => Payload::to_bytes(data),
             MotorsOn => Bytes::default(),
-            // TODO: tried to make a struct that wraps MotorsOffMode but ran into macro issues. 
-            MotorsOff { mode: _ } => unimplemented!(),
+            MotorsOff { mode } => {
+                if let Some(motor_off_mode) = mode {
+                    Payload::to_bytes(motor_off_mode)
+                } else {
+                    Bytes::default()
+                }
+            },
             ReadParams(data) => Payload::to_bytes(data),
             ReadParams3(data) => Payload::to_bytes(data),
             ReadParamsExt(data) => Payload::to_bytes(data),
