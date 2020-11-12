@@ -14,12 +14,12 @@ pub enum MotorsOffMode {
 }
 
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
-pub struct MotorsOffQuery {
+pub struct MotorsOffQuery(
     #[kind(enumeration)]
     #[name("")]
     #[format(u8)]
-    pub mode: MotorsOffMode,
-}
+    pub MotorsOffMode,
+);
 
 impl FromPrimitive for MotorsOffQuery {
     fn from_u64(n: u64) -> Option<Self> {
@@ -33,9 +33,9 @@ impl FromPrimitive for MotorsOffQuery {
     fn from_u8(n: u8) -> Option<Self> {
         use MotorsOffMode::*;
         Some(match n {
-            0 => Self { mode: Normal },
-            1 => Self { mode: Break },
-            2 => Self { mode: SafeStop },
+            0 => Self(Normal),
+            1 => Self(Break),
+            2 => Self(SafeStop),
             _ => return None,
         })
     }

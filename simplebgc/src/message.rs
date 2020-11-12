@@ -222,13 +222,7 @@ impl Message for OutgoingCommand {
             BoardInfo3 => Bytes::default(),
             Control(data) => Payload::to_bytes(data),
             MotorsOn => Bytes::default(),
-            MotorsOff { mode } => {
-                if let Some(motor_off_mode) = mode {
-                    Payload::to_bytes(motor_off_mode)
-                } else {
-                    Bytes::default()
-                }
-            },
+            MotorsOff(data) => Payload::to_bytes(data),
             ReadParams(data) => Payload::to_bytes(data),
             ReadParams3(data) => Payload::to_bytes(data),
             ReadParamsExt(data) => Payload::to_bytes(data),
@@ -242,7 +236,7 @@ impl Message for OutgoingCommand {
         }
     }
 
-    fn from_payload_bytes(id: u8, mut bytes: Bytes) -> Result<Self, MessageParseError>
+    fn from_payload_bytes(id: u8, bytes: Bytes) -> Result<Self, MessageParseError>
     where
         Self: Sized,
     {
@@ -260,13 +254,7 @@ impl Message for OutgoingCommand {
             CMD_GET_ANGLES_EXT => GetAnglesExt,
             CMD_CONTROL => Control(Payload::from_bytes(bytes)?),
             CMD_MOTORS_ON => MotorsOn,
-            CMD_MOTORS_OFF => MotorsOff {
-                mode: if bytes.remaining() > 0 {
-                    Some(read_enum!(bytes, "MODE", u8)?)
-                } else {
-                    None
-                },
-            },
+            CMD_MOTORS_OFF => MotorsOff(Payload::from_bytes(bytes)?),
             _ => return Err(MessageParseError::BadCommandId { id }),
         })
     }
