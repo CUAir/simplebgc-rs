@@ -52,3 +52,35 @@ impl Payload for i8 {
         Bytes::copy_from_slice(&[*self as u8])
     }
 }
+
+impl Payload for u16 {
+    fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
+    where
+        Self: Sized,
+    {
+        Ok(b.get_u16())
+    }
+
+    fn to_bytes(&self) -> Bytes
+    where
+        Self: Sized,
+    {
+        Bytes::copy_from_slice(&[*self as u8, (*self >> 8) as u8])
+    }
+}
+
+impl Payload for i16 {
+    fn from_bytes(mut b: Bytes) -> Result<Self, PayloadParseError>
+    where
+        Self: Sized,
+    {
+        Ok(b.get_i16())
+    }
+
+    fn to_bytes(&self) -> Bytes
+    where
+        Self: Sized,
+    {
+        Bytes::copy_from_slice(&[*self as u8, (*self >> 8) as u8])
+    }
+}
