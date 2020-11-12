@@ -291,9 +291,9 @@ impl Message for IncomingCommand {
 
         Ok(match id {
             CMD_BOARD_INFO => BoardInfo(Payload::from_bytes(bytes)?),
-            CMD_GET_ANGLES => BoardInfo(Payload::from_bytes(bytes)?),
-            CMD_READ_PARAMS => BoardInfo(Payload::from_bytes(bytes)?),
-            CMD_READ_PARAMS_3 => BoardInfo(Payload::from_bytes(bytes)?),
+            CMD_GET_ANGLES => GetAngles(Payload::from_bytes(bytes)?),
+            CMD_READ_PARAMS => ReadParams(Payload::from_bytes(bytes)?),
+            CMD_READ_PARAMS_3 => ReadParams3(Payload::from_bytes(bytes)?),
             _ => return Err(MessageParseError::BadCommandId { id }),
         })
     }
