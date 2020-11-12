@@ -198,19 +198,22 @@ fn checksum_bgc_v2(buf: &[u8]) -> u16 {
 
 impl Message for OutgoingCommand {
     fn command_id(&self) -> u8 {
+        use OutgoingCommand::*;
         match self {
-            OutgoingCommand::Control { .. } => CMD_CONTROL,
-            OutgoingCommand::MotorsOn => CMD_MOTORS_ON,
-            OutgoingCommand::MotorsOff { .. } => CMD_MOTORS_OFF,
-            OutgoingCommand::ReadParams { .. } => CMD_READ_PARAMS,
-            OutgoingCommand::ReadParams3 { .. } => CMD_READ_PARAMS_3,
-            OutgoingCommand::ReadParamsExt { .. } => CMD_READ_PARAMS_EXT,
-            OutgoingCommand::ReadParamsExt2 { .. } => CMD_READ_PARAMS_EXT2,
-            OutgoingCommand::ReadParamsExt3 { .. } => CMD_READ_PARAMS_EXT3,
-            OutgoingCommand::WriteParams(_) => CMD_WRITE_PARAMS,
-            OutgoingCommand::WriteParams3(_) => CMD_WRITE_PARAMS_3,
-            OutgoingCommand::GetAngles => CMD_GET_ANGLES,
-            OutgoingCommand::GetAnglesExt => CMD_GET_ANGLES,
+            BoardInfo => CMD_BOARD_INFO,
+            BoardInfo3 => CMD_BOARD_INFO_3,
+            Control { .. } => CMD_CONTROL,
+            MotorsOn => CMD_MOTORS_ON,
+            MotorsOff { .. } => CMD_MOTORS_OFF,
+            ReadParams { .. } => CMD_READ_PARAMS,
+            ReadParams3 { .. } => CMD_READ_PARAMS_3,
+            ReadParamsExt { .. } => CMD_READ_PARAMS_EXT,
+            ReadParamsExt2 { .. } => CMD_READ_PARAMS_EXT2,
+            ReadParamsExt3 { .. } => CMD_READ_PARAMS_EXT3,
+            WriteParams(_) => CMD_WRITE_PARAMS,
+            WriteParams3(_) => CMD_WRITE_PARAMS_3,
+            GetAngles => CMD_GET_ANGLES,
+            GetAnglesExt => CMD_GET_ANGLES,
             _ => unimplemented!(),
         }
     }
