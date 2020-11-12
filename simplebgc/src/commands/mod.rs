@@ -34,7 +34,7 @@ pub enum OutgoingCommand {
     BoardInfo3,
     Control(ControlData),
     MotorsOn,
-    MotorsOff { mode: Option<MotorsOffMode> },
+    MotorsOff(MotorsOffQuery),
     ReadParams(ParamsQuery),
     ReadParams3(ParamsQuery),
     ReadParamsExt(ParamsQuery),

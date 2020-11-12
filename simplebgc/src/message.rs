@@ -216,10 +216,27 @@ impl Message for OutgoingCommand {
     }
 
     fn to_payload_bytes(&self) -> Bytes {
-        unimplemented!()
+        use OutgoingCommand::*;
+        match self {
+            BoardInfo => Bytes::default(),
+            BoardInfo3 => Bytes::default(),
+            Control(data) => Payload::to_bytes(data),
+            MotorsOn => Bytes::default(),
+            MotorsOff(data) => Payload::to_bytes(data),
+            ReadParams(data) => Payload::to_bytes(data),
+            ReadParams3(data) => Payload::to_bytes(data),
+            ReadParamsExt(data) => Payload::to_bytes(data),
+            ReadParamsExt2(data) => Payload::to_bytes(data),
+            ReadParamsExt3(data) => Payload::to_bytes(data),
+            WriteParams(data) => Payload::to_bytes(data),
+            WriteParams3(data) => Payload::to_bytes(data),
+            GetAngles => Bytes::default(),
+            GetAnglesExt => Bytes::default(),
+            Other { id: _ } => Bytes::default(),
+        }
     }
 
-    fn from_payload_bytes(id: u8, mut bytes: Bytes) -> Result<Self, MessageParseError>
+    fn from_payload_bytes(id: u8, bytes: Bytes) -> Result<Self, MessageParseError>
     where
         Self: Sized,
     {
@@ -237,13 +254,7 @@ impl Message for OutgoingCommand {
             CMD_GET_ANGLES_EXT => GetAnglesExt,
             CMD_CONTROL => Control(Payload::from_bytes(bytes)?),
             CMD_MOTORS_ON => MotorsOn,
-            CMD_MOTORS_OFF => MotorsOff {
-                mode: if bytes.remaining() > 0 {
-                    Some(read_enum!(bytes, "MODE", u8)?)
-                } else {
-                    None
-                },
-            },
+            CMD_MOTORS_OFF => MotorsOff(Payload::from_bytes(bytes)?),
             _ => return Err(MessageParseError::BadCommandId { id }),
         })
     }
@@ -269,11 +280,19 @@ impl Message for IncomingCommand {
         }
     }
 
-    fn from_payload_bytes(_id: u8, _bytes: Bytes) -> Result<Self, MessageParseError>
+    fn from_payload_bytes(id: u8, bytes: Bytes) -> Result<Self, MessageParseError>
     where
         Self: Sized,
     {
-        unimplemented!();
+        use IncomingCommand::*;
+
+        Ok(match id {
+            CMD_BOARD_INFO => BoardInfo(Payload::from_bytes(bytes)?),
+            CMD_GET_ANGLES => BoardInfo(Payload::from_bytes(bytes)?),
+            CMD_READ_PARAMS => BoardInfo(Payload::from_bytes(bytes)?),
+            CMD_READ_PARAMS_3 => BoardInfo(Payload::from_bytes(bytes)?),
+            _ => return Err(MessageParseError::BadCommandId { id }),
+        })
     }
 }
 
