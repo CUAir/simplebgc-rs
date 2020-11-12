@@ -2,6 +2,12 @@ use crate::*;
 use bytes::{BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
 
+#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[repr(u8)]
+pub enum RTDataFlags {
+    MotorsOn = 1 << 0,
+}
+
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct AccGyroData {
     #[kind(raw)]
@@ -12,60 +18,6 @@ pub struct AccGyroData {
 }
 
 payload_rpy!(AccGyroData, 4);
-
-#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
-pub struct RcRPY (
-    #[kind(raw)]
-    #[name("")]
-    pub i16,
-);
-
-payload_rpy!(RcRPY, 2);
-
-#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
-pub struct ImuAngle (
-    // units: 0.02197265625 degrees (360 / 2^14)
-    #[kind(raw)]
-    #[name("")]
-    pub i16,
-);
-
-payload_rpy!(ImuAngle, 2);
-
-#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
-pub struct FrameImuAngle (
-    // units: 0.02197265625 degrees (360 / 2^14)
-    #[kind(raw)]
-    #[name("")]
-    pub i16,
-);
-
-payload_rpy!(FrameImuAngle, 2);
-
-#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
-pub struct TargetAngle (
-    // units: 0.02197265625 degrees (360 / 2^14)
-    #[kind(raw)]
-    #[name("")]
-    pub i16,
-);
-
-payload_rpy!(TargetAngle, 2);
-
-#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
-#[repr(u8)]
-pub enum RTDataFlags {
-    MotorsOn = 1 << 0,
-}
-
-#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
-pub struct MotorPower (
-    #[kind(raw)]
-    #[name("")]
-    pub u8,
-);
-
-payload_rpy!(MotorPower, 1);
 
 #[derive(BgcPayload, Clone, Debug, PartialEq)]
 pub struct RealtimeData3 {
@@ -87,7 +39,7 @@ pub struct RealtimeData3 {
 
     #[kind(payload)]
     #[size(6)]
-    pub rc_rpy: RollPitchYaw<RcRPY>,
+    pub rc_rpy: RollPitchYaw<i16>,
 
     #[kind(raw)]
     pub rc_cmd: i16,
@@ -100,15 +52,15 @@ pub struct RealtimeData3 {
 
     #[kind(payload)]
     #[size(6)]
-    pub imu_angle: RollPitchYaw<ImuAngle>,
+    pub imu_angle: RollPitchYaw<i16>,
 
     #[kind(payload)]
     #[size(6)]
-    pub frame_imu_angle: RollPitchYaw<FrameImuAngle>,
+    pub frame_imu_angle: RollPitchYaw<i16>,
 
     #[kind(payload)]
     #[size(6)]
-    pub target_angle: RollPitchYaw<TargetAngle>,
+    pub target_angle: RollPitchYaw<i16>,
 
     #[kind(raw)]
     pub cycle_time: u16,
@@ -134,5 +86,5 @@ pub struct RealtimeData3 {
 
     #[kind(payload)]
     #[size(3)]
-    pub motor_power: RollPitchYaw<MotorPower>,
+    pub motor_power: RollPitchYaw<u8>,
 }

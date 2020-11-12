@@ -21,6 +21,8 @@ use bytes::{BufMut, Bytes, BytesMut};
 
 payload_rpy!(u8, 1);
 payload_rpy!(i8, 1);
+payload_rpy!(u16, 2);
+payload_rpy!(i16, 2);
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IncomingCommand {
