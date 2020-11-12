@@ -65,7 +65,7 @@ impl Payload for u16 {
     where
         Self: Sized,
     {
-        Bytes::copy_from_slice(&[(*self >> 8) as u8, (*self & 0xFF) as u8])
+        Bytes::copy_from_slice(&[*self as u8, (*self >> 8) as u8])
     }
 }
 
@@ -81,6 +81,6 @@ impl Payload for i16 {
     where
         Self: Sized,
     {
-        Bytes::copy_from_slice(&[(*self >> 8) as u8, (*self & 0xFF) as u8])
+        Bytes::copy_from_slice(&[*self as u8, (*self >> 8) as u8])
     }
 }
