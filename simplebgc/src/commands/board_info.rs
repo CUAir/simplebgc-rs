@@ -20,6 +20,16 @@ pub enum BoardFeatures {
     BodeTest = 1 << 3,
     Scripting = 1 << 4,
     CurrentSensor = 1 << 5,
+    MagSensor = 1 << 6,
+    OrderOfAxesLetus = 1 << 7,
+    ImuEeprom = 1 << 8,
+    FrameImuEeprom = 1 << 9,
+    CanPort = 1 << 10,
+    Momentum = 1 << 11,
+    CoggingCorrection = 1 << 12,
+    Motor4Control = 1 << 13,
+    AccAutoCalib = 1 << 14,
+    BigFlash = 1 << 15,
 }
 
 #[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
