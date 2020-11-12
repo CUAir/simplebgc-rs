@@ -213,6 +213,7 @@ impl Message for OutgoingCommand {
             ReadParamsExt3 { .. } => CMD_READ_PARAMS_EXT3,
             WriteParams(_) => CMD_WRITE_PARAMS,
             WriteParams3(_) => CMD_WRITE_PARAMS_3,
+            RealtimeData3 => CMD_REALTIME_DATA_3,
             GetAngles => CMD_GET_ANGLES,
             GetAnglesExt => CMD_GET_ANGLES,
             _ => unimplemented!(),
@@ -235,6 +236,7 @@ impl Message for OutgoingCommand {
             ReadParamsExt3(data) => Payload::to_bytes(data),
             WriteParams(data) => Payload::to_bytes(data),
             WriteParams3(data) => Payload::to_bytes(data),
+            RealtimeData3 => Bytes::default(),
             GetAngles => Bytes::default(),
             GetAnglesExt => Bytes::default(),
             Other { id: _ } => Bytes::default(),
@@ -272,6 +274,7 @@ impl Message for IncomingCommand {
             IncomingCommand::GetAngles(_) => CMD_GET_ANGLES,
             IncomingCommand::ReadParams(_) => CMD_READ_PARAMS,
             IncomingCommand::ReadParams3(_) => CMD_READ_PARAMS_3,
+            IncomingCommand::RealtimeData3(_) => CMD_REALTIME_DATA_3,
         }
     }
 
@@ -282,6 +285,7 @@ impl Message for IncomingCommand {
             GetAngles(angles) => Payload::to_bytes(angles),
             ReadParams(params) => Payload::to_bytes(params),
             ReadParams3(params) => Payload::to_bytes(params),
+            RealtimeData3(data) => Payload::to_bytes(data),
         }
     }
 

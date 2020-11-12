@@ -7,12 +7,14 @@ mod control;
 mod get_angles;
 mod motors_off;
 mod read_params;
+mod realtime;
 
 pub use self::board_info::*;
 pub use self::control::*;
 pub use self::get_angles::*;
 pub use self::motors_off::*;
 pub use self::read_params::*;
+pub use self::realtime::*;
 
 use crate::{Payload, PayloadParseError, RollPitchYaw};
 use bytes::{BufMut, Bytes, BytesMut};
@@ -26,6 +28,7 @@ pub enum IncomingCommand {
     GetAngles(RollPitchYaw<AngleInfo>),
     ReadParams(Params3Data),
     ReadParams3(Params3Data),
+    RealtimeData3(RealtimeData3)
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -43,6 +46,7 @@ pub enum OutgoingCommand {
     ReadParamsExt3(ParamsQuery),
     WriteParams(Params3Data),
     WriteParams3(Params3Data),
+    RealtimeData3,
     GetAngles,
     GetAnglesExt,
     Other { id: u8 },
