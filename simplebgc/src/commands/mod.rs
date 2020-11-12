@@ -32,6 +32,7 @@ pub enum IncomingCommand {
 pub enum OutgoingCommand {
     BoardInfo,
     BoardInfo3,
+    Reset,
     Control(ControlData),
     MotorsOn,
     MotorsOff(MotorsOffQuery),

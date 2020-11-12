@@ -202,6 +202,7 @@ impl Message for OutgoingCommand {
         match self {
             BoardInfo => CMD_BOARD_INFO,
             BoardInfo3 => CMD_BOARD_INFO_3,
+            Reset => CMD_RESET,
             Control { .. } => CMD_CONTROL,
             MotorsOn => CMD_MOTORS_ON,
             MotorsOff { .. } => CMD_MOTORS_OFF,
@@ -223,6 +224,7 @@ impl Message for OutgoingCommand {
         match self {
             BoardInfo => Bytes::default(),
             BoardInfo3 => Bytes::default(),
+            Reset => Bytes::default(),
             Control(data) => Payload::to_bytes(data),
             MotorsOn => Bytes::default(),
             MotorsOff(data) => Payload::to_bytes(data),
