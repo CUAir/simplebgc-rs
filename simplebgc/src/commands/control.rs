@@ -1,7 +1,7 @@
 use crate::{Payload, PayloadParseError, RollPitchYaw};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use enumflags2::BitFlags;
-use num_traits::FromPrimitive;
+use num_traits::{FromPrimitive, ToPrimitive};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ControlFormat {
@@ -121,6 +121,20 @@ impl FromPrimitive for AxisControlState {
     }
 }
 
+impl ToPrimitive for AxisControlState {
+    fn to_i64(&self) -> Option<i64> {
+        None
+    }
+
+    fn to_u8(&self) -> Option<u8> {
+        Some(self.mode.to_u8().unwrap() | BitFlags::bits(self.flags))
+    }
+
+    fn to_u64(&self) -> Option<u64> {
+        self.to_u8().map(|n| n as u64)
+    }
+}
+
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct AxisControlParams {
     /// Speed of rotation. Overrides the speed settings in the GUI and
@@ -184,6 +198,23 @@ impl Payload for ControlData {
     where
         Self: Sized,
     {
-        unimplemented!()
+        let mut b = match self.mode {
+            ControlFormat::Legacy(mode) => {
+                let mut b = BytesMut::with_capacity(13);
+                b.put_u8(mode.to_u8().unwrap());
+                b
+            }
+            ControlFormat::Extended(mode) => {
+                let mut b = BytesMut::with_capacity(15);
+                b.put_u8(mode.roll.to_u8().unwrap());
+                b.put_u8(mode.pitch.to_u8().unwrap());
+                b.put_u8(mode.yaw.to_u8().unwrap());
+                b
+            }
+        };
+
+        b.extend(self.axes.to_bytes());
+
+        b.freeze()
     }
 }
