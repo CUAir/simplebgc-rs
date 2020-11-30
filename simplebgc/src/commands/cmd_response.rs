@@ -20,10 +20,12 @@ impl Payload for Confirm {
     {
         Ok(Confirm {
             cmd_id: read_enum!(b, "CMD_ID", u8)?,
-            data: if b.remaining() == 2 {
+            data: if b.remaining() == 1 {
                 DataType::DataU8(read_enum!(b, "DATA", u8)?)
-            } else {
+            } else if b.remaining() == 2 {
                 DataType::DataU16(read_enum!(b, "DATA", u16)?)
+            } else {
+                panic!("Unexpected amount of remaining bytes, expected 1 or 2, got {}", b.remaining())
             },
         })
     }
