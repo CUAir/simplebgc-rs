@@ -3,6 +3,7 @@ pub(crate) mod macros;
 pub(crate) mod constants;
 
 mod board_info;
+mod cmd_response;
 mod control;
 mod get_angles;
 mod motors_off;
@@ -10,6 +11,7 @@ mod read_params;
 mod realtime;
 
 pub use self::board_info::*;
+pub use self::cmd_response::*;
 pub use self::control::*;
 pub use self::get_angles::*;
 pub use self::motors_off::*;
