@@ -9,6 +9,7 @@ pub struct Confirm {
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum DataType {
+    None,
     DataU8(u8),
     DataU16(u16),
 }
@@ -20,12 +21,14 @@ impl Payload for Confirm {
     {
         Ok(Confirm {
             cmd_id: read_enum!(b, "CMD_ID", u8)?,
-            data: if b.remaining() == 1 {
+            data: if b.remaining() == 0 {
+                DataType::None
+            } else if b.remaining() == 1 {
                 DataType::DataU8(read_enum!(b, "DATA", u8)?)
             } else if b.remaining() == 2 {
                 DataType::DataU16(read_enum!(b, "DATA", u16)?)
             } else {
-                panic!("Unexpected amount of remaining bytes, expected 1 or 2, got {}", b.remaining())
+                panic!("Unexpected amount of remaining bytes. Expected 0, 1, or 2, got {}", b.remaining())
             },
         })
     }
@@ -35,6 +38,11 @@ impl Payload for Confirm {
         Self: Sized,
     {
         let b = match self.data {
+            DataType::None => {
+                let mut b = BytesMut::with_capacity(1);
+                b.put_u8(self.cmd_id);
+                b
+            }
             DataType::DataU8(data_raw) => {
                 let mut b = BytesMut::with_capacity(2);
                 b.put_u8(self.cmd_id);
