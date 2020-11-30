@@ -20,7 +20,7 @@ impl Payload for Confirm {
     {
         Ok(Confirm {
             cmd_id: read_enum!(b, "CMD_ID", u8)?,
-            data: if b.remaining() == 1 {
+            data: if b.remaining() == 2 {
                 DataType::DataU8(read_enum!(b, "DATA", u8)?)
             } else {
                 DataType::DataU16(read_enum!(b, "DATA", u16)?)
