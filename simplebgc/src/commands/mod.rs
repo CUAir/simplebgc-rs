@@ -28,6 +28,7 @@ payload_rpy!(i16, 2);
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IncomingCommand {
+    CommandConfirm(Confirm),
     BoardInfo(BoardInfo),
     GetAngles(RollPitchYaw<AngleInfo>),
     ReadParams(Params3Data),
