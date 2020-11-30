@@ -124,7 +124,9 @@ impl FromPrimitive for RcMap {
     }
 
     fn from_u8(b: u8) -> Option<Self> {
-        if b == 0 { return Some(RcMap::None) }
+        if b == 0 {
+            return Some(RcMap::None);
+        }
 
         let channel = b & 0b11111;
         let kind = (b & 0b00000111) >> 5;

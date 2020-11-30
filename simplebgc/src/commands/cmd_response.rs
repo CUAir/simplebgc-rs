@@ -20,6 +20,8 @@ impl Payload for Confirm {
     {
         Ok(Confirm {
             cmd_id: read_enum!(b, "CMD_ID", u8)?,
+            // For some reason I was observing behavior inconsistent with the docs where
+            // I was getting 0 bytes here when it says there should be 1 or 2 bytes.
             data: if b.remaining() == 0 {
                 None
             } else if b.remaining() == 1 {
@@ -27,7 +29,10 @@ impl Payload for Confirm {
             } else if b.remaining() == 2 {
                 Some(DataType::DataU16(read_enum!(b, "DATA", u16)?))
             } else {
-                panic!("Unexpected amount of remaining bytes. Expected 0, 1, or 2, got {}", b.remaining())
+                panic!(
+                    "Unexpected amount of remaining bytes. Expected 0, 1, or 2, got {}",
+                    b.remaining()
+                )
             },
         })
     }
@@ -47,7 +52,7 @@ impl Payload for Confirm {
                 b.put_u8(self.cmd_id);
                 b.put_u8(data_raw);
                 b
-            },
+            }
             Some(DataType::DataU16(data_raw)) => {
                 let mut b = BytesMut::with_capacity(3);
                 b.put_u8(self.cmd_id);
@@ -64,7 +69,7 @@ impl Payload for Confirm {
 pub struct Error {
     #[kind(raw)]
     pub error_code: u8,
-    
+
     #[kind(raw)]
     pub error_data: [u8; 4],
 }
