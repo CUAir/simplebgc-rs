@@ -298,6 +298,7 @@ impl Message for IncomingCommand {
         use IncomingCommand::*;
 
         Ok(match id {
+            CMD_CONFIRM => CommandConfirm(Payload::from_bytes(bytes)?),
             CMD_BOARD_INFO => BoardInfo(Payload::from_bytes(bytes)?),
             CMD_GET_ANGLES => GetAngles(Payload::from_bytes(bytes)?),
             CMD_READ_PARAMS => ReadParams(Payload::from_bytes(bytes)?),

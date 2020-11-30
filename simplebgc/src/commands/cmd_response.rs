@@ -3,8 +3,8 @@ use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Confirm {
-    cmd_id: u8,
-    data: DataType,
+    pub cmd_id: u8,
+    pub data: DataType,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
