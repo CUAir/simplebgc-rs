@@ -19,7 +19,6 @@ use syn::*;
 mod field;
 mod primitive;
 
-
 /// Add this to any structure that represents a payload
 /// for a SimpleBGC command.
 ///
@@ -208,7 +207,7 @@ pub fn payload_derive(input: TokenStream) -> TokenStream {
             Data::Union(_) => unimplemented!(),
         },
     )
-        .into()
+    .into()
 }
 
 // This trick is taken from num_traits:

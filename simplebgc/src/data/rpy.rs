@@ -10,7 +10,7 @@ impl<T> RollPitchYaw<T> {
         RollPitchYaw {
             roll: &self.roll,
             pitch: &self.pitch,
-            yaw: &self.yaw
+            yaw: &self.yaw,
         }
     }
 
@@ -18,7 +18,7 @@ impl<T> RollPitchYaw<T> {
         RollPitchYaw {
             roll: &mut self.roll,
             pitch: &mut self.pitch,
-            yaw: &mut self.yaw
+            yaw: &mut self.yaw,
         }
     }
 
