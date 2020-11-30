@@ -271,6 +271,7 @@ impl Message for IncomingCommand {
     fn command_id(&self) -> u8 {
         match self {
             IncomingCommand::CommandConfirm(_) => CMD_CONFIRM,
+            IncomingCommand::CommandError(_) => CMD_ERROR,
             IncomingCommand::BoardInfo(_) => CMD_BOARD_INFO,
             IncomingCommand::GetAngles(_) => CMD_GET_ANGLES,
             IncomingCommand::ReadParams(_) => CMD_READ_PARAMS,
@@ -283,6 +284,7 @@ impl Message for IncomingCommand {
         use IncomingCommand::*;
         match self {
             CommandConfirm(data) => Payload::to_bytes(data),
+            CommandError(data) => Payload::to_bytes(data),
             BoardInfo(info) => Payload::to_bytes(info),
             GetAngles(angles) => Payload::to_bytes(angles),
             ReadParams(params) => Payload::to_bytes(params),
@@ -299,6 +301,7 @@ impl Message for IncomingCommand {
 
         Ok(match id {
             CMD_CONFIRM => CommandConfirm(Payload::from_bytes(bytes)?),
+            CMD_ERROR => CommandError(Payload::from_bytes(bytes)?),
             CMD_BOARD_INFO => BoardInfo(Payload::from_bytes(bytes)?),
             CMD_GET_ANGLES => GetAngles(Payload::from_bytes(bytes)?),
             CMD_READ_PARAMS => ReadParams(Payload::from_bytes(bytes)?),

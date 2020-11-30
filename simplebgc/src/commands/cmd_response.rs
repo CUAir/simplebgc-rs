@@ -60,7 +60,11 @@ impl Payload for Confirm {
     }
 }
 
-// #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
-// pub struct Error {
-
-// }
+#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
+pub struct Error {
+    #[kind(raw)]
+    pub error_code: u8,
+    
+    #[kind(raw)]
+    pub error_data: [u8; 4],
+}
