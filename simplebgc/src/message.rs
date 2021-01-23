@@ -3,8 +3,12 @@ use crate::payload::*;
 use crate::{IncomingCommand, OutgoingCommand};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use thiserror::Error;
+use tokio_util::codec::{Encoder, Decoder};
 
-#[derive(Error, Clone, Debug, PartialEq)]
+pub struct V1Codec;
+pub struct V2Codec;
+
+#[derive(Error, Debug)]
 pub enum MessageParseError {
     #[error("bad version code")]
     BadVersionCode,
@@ -18,6 +22,14 @@ pub enum MessageParseError {
     InsufficientData,
     #[error(transparent)]
     PayloadParse(#[from] PayloadParseError),
+    #[error("there was an IO error")]
+    IoError(std::io::Error),
+}
+
+impl From<std::io::Error> for MessageParseError {
+    fn from(error: std::io::Error) -> Self {
+        MessageParseError::IoError(error)
+    }
 }
 
 pub trait Message {
@@ -302,6 +314,64 @@ impl Message for IncomingCommand {
             CMD_READ_PARAMS_3 => ReadParams3(Payload::from_bytes(bytes)?),
             _ => return Err(MessageParseError::BadCommandId { id }),
         })
+    }
+}
+
+impl Decoder for V1Codec {
+    type Item = IncomingCommand;
+    type Error = MessageParseError;
+
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        match IncomingCommand::from_bytes(&src[..]) {
+            Ok((m, num_bytes)) => {
+                // SAFETY: num_bytes is returned by from_bytes as the number of bytes for a particular message.
+                // Since from_bytes requires at least num_bytes to correctly parse a message, then it is safe
+                // to advance by num_bytes. This assumes the correctness of the from_bytes function.
+                unsafe { src.advance_mut(num_bytes); }
+                Ok(Some(m))
+            },
+            Err(MessageParseError::InsufficientData) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+impl Decoder for V2Codec {
+    type Item = IncomingCommand;
+    type Error = MessageParseError;
+
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        match IncomingCommand::from_bytes(&src[..]) {
+            Ok((m, num_bytes)) => {
+                // SAFETY: num_bytes is returned by from_bytes as the number of bytes for a particular message.
+                // Since from_bytes requires at least num_bytes to correctly parse a message, then it is safe
+                // to advance by num_bytes. This assumes the correctness of the from_bytes function.
+                unsafe { src.advance_mut(num_bytes); }
+                Ok(Some(m))
+            },
+            Err(MessageParseError::InsufficientData) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+impl Encoder<OutgoingCommand> for V1Codec {
+    type Error = MessageParseError;
+
+    fn encode(&mut self, item: OutgoingCommand, dst: &mut BytesMut) -> Result<(), Self::Error> {
+        let bytes = item.to_v1_bytes();
+        dst.put_slice(&bytes[..]);
+        Ok(())
+    }
+}
+
+impl Encoder<OutgoingCommand> for V2Codec {
+    type Error = MessageParseError;
+
+    fn encode(&mut self, item: OutgoingCommand, dst: &mut BytesMut) -> Result<(), Self::Error> {
+        let bytes = item.to_v2_bytes();
+        dst.put_slice(&bytes[..]);
+        Ok(())
     }
 }
 
