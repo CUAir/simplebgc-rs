@@ -13,6 +13,6 @@ mod message;
 mod payload;
 
 pub use commands::*;
+pub use data::*;
 pub use message::*;
 pub use payload::*;
-pub use data::*;
