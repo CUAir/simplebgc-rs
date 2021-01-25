@@ -1,7 +1,7 @@
 use crate::commands::constants::*;
 use crate::payload::*;
 use crate::{IncomingCommand, OutgoingCommand};
-use bytes::{Buf, BufMut, Bytes, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 use thiserror::Error;
 use tokio_util::codec::{Encoder, Decoder};
 
@@ -53,7 +53,7 @@ pub trait Message {
         buf.put_u8(payload.len() as u8);
 
         let header_checksum = cmd.wrapping_add(payload.len() as u8);
-        let payload_checksum = payload.bytes().iter().fold(0u8, |l, r| l.wrapping_add(*r));
+        let payload_checksum = payload.iter().fold(0u8, |l, r| l.wrapping_add(*r));
 
         buf.put_u8(header_checksum);
         buf.put(payload);
