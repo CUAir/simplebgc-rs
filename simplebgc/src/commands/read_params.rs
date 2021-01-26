@@ -242,8 +242,8 @@ pub enum FollowMode {
 #[repr(i8)]
 pub enum Orientation {
     PosX = 1,
-    PosY,
-    PosZ,
+    PosY = 2,
+    PosZ = 3,
     NegX = -1,
     NegY = -2,
     NegZ = -3,
