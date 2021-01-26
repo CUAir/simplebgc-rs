@@ -605,6 +605,11 @@ pub struct Params3Data {
     pub frame_angle_from_motors: bool,
     /// Disabled = 0
     /// 1..32 - Virtual channel number as source of data to be output
+
+    #[kind(payload)]
+    #[size(3)]
+    pub rc_memory: RollPitchYaw<u8>,
+
     #[kind(raw)]
     pub servo_out: [u8; 4],
     /// PWM frequency, 10 Hz per unit.
@@ -623,6 +628,10 @@ pub struct Params3Data {
 
     #[kind(raw)]
     pub adaptive_pid_recovery_factor: u8,
+
+    #[kind(payload)]
+    #[size(3)]
+    pub follow_lpf: RollPitchYaw<u8>,
 
     #[kind(flags)]
     #[format(u16)]
