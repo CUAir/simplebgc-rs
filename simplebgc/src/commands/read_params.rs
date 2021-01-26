@@ -394,12 +394,12 @@ pub enum ImuType {
 pub struct RcMixes {
     #[kind(payload)]
     #[name("RC_MIX_FC_ROLL")]
-    #[size(2)]
+    #[size(1)]
     pub fc_roll: RcMix,
 
     #[kind(payload)]
     #[name("RC_MIX_FC_PITCH")]
-    #[size(2)]
+    #[size(1)]
     pub fc_pitch: RcMix,
 }
 
