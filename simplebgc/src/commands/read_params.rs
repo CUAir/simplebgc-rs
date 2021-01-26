@@ -607,8 +607,8 @@ pub struct Params3Data {
     /// 1..32 - Virtual channel number as source of data to be output
 
     #[kind(payload)]
-    #[size(3)]
-    pub rc_memory: RollPitchYaw<u8>,
+    #[size(6)]
+    pub rc_memory: RollPitchYaw<i16>,
 
     #[kind(raw)]
     pub servo_out: [u8; 4],
