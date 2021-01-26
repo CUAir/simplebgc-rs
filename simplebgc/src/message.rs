@@ -1,7 +1,7 @@
 use crate::commands::constants::*;
 use crate::payload::*;
 use crate::{IncomingCommand, OutgoingCommand};
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use thiserror::Error;
 use tokio_util::codec::{Encoder, Decoder};
 
@@ -336,10 +336,7 @@ impl Decoder for V1Codec {
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         match IncomingCommand::from_bytes(&src[..]) {
             Ok((m, num_bytes)) => {
-                // SAFETY: num_bytes is returned by from_bytes as the number of bytes for a particular message.
-                // Since from_bytes requires at least num_bytes to correctly parse a message, then it is safe
-                // to advance by num_bytes. This assumes the correctness of the from_bytes function.
-                unsafe { src.advance_mut(num_bytes); }
+                src.advance(num_bytes);
                 Ok(Some(m))
             },
             Err(MessageParseError::InsufficientData) => Ok(None),
@@ -355,10 +352,7 @@ impl Decoder for V2Codec {
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
         match IncomingCommand::from_bytes(&src[..]) {
             Ok((m, num_bytes)) => {
-                // SAFETY: num_bytes is returned by from_bytes as the number of bytes for a particular message.
-                // Since from_bytes requires at least num_bytes to correctly parse a message, then it is safe
-                // to advance by num_bytes. This assumes the correctness of the from_bytes function.
-                unsafe { src.advance_mut(num_bytes); }
+                src.advance(num_bytes);
                 Ok(Some(m))
             },
             Err(MessageParseError::InsufficientData) => Ok(None),
