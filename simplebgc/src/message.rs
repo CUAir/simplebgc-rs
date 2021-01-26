@@ -323,6 +323,7 @@ impl Message for IncomingCommand {
             CMD_GET_ANGLES => GetAngles(Payload::from_bytes(bytes)?),
             CMD_READ_PARAMS => ReadParams(Payload::from_bytes(bytes)?),
             CMD_READ_PARAMS_3 => ReadParams3(Payload::from_bytes(bytes)?),
+            CMD_REALTIME_DATA_3 => RealtimeData3(Payload::from_bytes(bytes)?),
             _ => return Err(MessageParseError::BadCommandId { id }),
         })
     }
