@@ -213,23 +213,6 @@ impl Payload for RcMix {
     }
 }
 
-// impl FromPrimitive for RcMix {
-//     fn from_i64(n: i64) -> Option<Self> {
-//         FromPrimitive::from_u8(n as u8)
-//     }
-
-//     fn from_u8(b: u8) -> Option<Self> {
-//         Some(RcMix(
-//             FromPrimitive::from_u8(b & 0b111111)?,
-//             FromPrimitive::from_u8(b >> 5)?,
-//         ))
-//     }
-
-//     fn from_u64(b: u64) -> Option<Self> {
-//         FromPrimitive::from_u8(b as u8)
-//     }
-// }
-
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum FollowMode {
