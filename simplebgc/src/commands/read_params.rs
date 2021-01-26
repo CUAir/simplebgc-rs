@@ -282,7 +282,7 @@ pub enum MotorOutput {
     I2CDrv4,
 }
 
-#[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
+#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum BeeperMode {
     Calibrate = 1,
@@ -580,9 +580,9 @@ pub struct Params3Data {
     #[kind(raw)]
     pub bat_comp_ref: i16,
 
-    #[kind(enumeration)]
+    #[kind(flags)]
     #[format(u8)]
-    pub beeper_mode: BeeperMode,
+    pub beeper_mode: BitFlags<BeeperMode>,
 
     #[kind(raw)]
     #[format(u8)]
