@@ -51,8 +51,8 @@ payload_rpy!(AxisRcParams, 8);
 #[repr(u8)]
 pub enum AxisRcMode {
     Angle = 1 << 0,
-    Speed = 1 << 1,
-    Inverted = 1 << 3,
+    Fixed = 1 << 1,
+    Inverted = 1 << 2,
 }
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
@@ -173,14 +173,6 @@ impl ToPrimitive for RcMap {
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-pub enum RcMixRate {
-    FullRc = 0,
-    HalfHalf = 32,
-    FullFc = 63,
-}
-
-#[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
-#[repr(u8)]
 pub enum RcMixChannel {
     None = 0,
     Roll,
@@ -188,34 +180,55 @@ pub enum RcMixChannel {
     Yaw,
 }
 
-#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
-pub struct RcMix(
-    #[kind(enumeration)]
-    #[name("")]
-    #[format(u8)]
-    pub RcMixRate,
-    #[kind(enumeration)]
-    #[name("")]
-    #[format(u8)]
-    pub RcMixChannel,
-);
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct RcMix {
+    pub rc_mix_rate: u8,
+    pub rc_mix_channel: RcMixChannel,
+}
 
-impl FromPrimitive for RcMix {
-    fn from_i64(n: i64) -> Option<Self> {
-        FromPrimitive::from_u8(n as u8)
+impl Payload for RcMix {
+    fn from_bytes(b: Bytes) -> Result<Self, PayloadParseError>
+    where
+            Self: Sized {
+        // We expect one byte
+        if b.len() < 1 {
+            return Err(PayloadParseError::InvalidFlags{ name: "RcMixRate".into() });
+        }
+        let byte = b[0];
+        let rc_mix_rate = 0b00011111 & byte;
+        let rc_mix_channel = RcMixChannel::from_u8(byte >> 5).unwrap();
+        Ok(RcMix {
+            rc_mix_rate,
+            rc_mix_channel,
+        })
     }
 
-    fn from_u8(b: u8) -> Option<Self> {
-        Some(RcMix(
-            FromPrimitive::from_u8(b & 0b111111)?,
-            FromPrimitive::from_u8(b >> 5)?,
-        ))
-    }
-
-    fn from_u64(b: u64) -> Option<Self> {
-        FromPrimitive::from_u8(b as u8)
+    fn to_bytes(&self) -> Bytes
+    where
+            Self: Sized {
+        let mut b = BytesMut::new();
+        let byte = self.rc_mix_rate & (self.rc_mix_channel.to_u8().unwrap() << 5);
+        b.put_u8(byte);
+        b.freeze()
     }
 }
+
+// impl FromPrimitive for RcMix {
+//     fn from_i64(n: i64) -> Option<Self> {
+//         FromPrimitive::from_u8(n as u8)
+//     }
+
+//     fn from_u8(b: u8) -> Option<Self> {
+//         Some(RcMix(
+//             FromPrimitive::from_u8(b & 0b111111)?,
+//             FromPrimitive::from_u8(b >> 5)?,
+//         ))
+//     }
+
+//     fn from_u64(b: u64) -> Option<Self> {
+//         FromPrimitive::from_u8(b as u8)
+//     }
+// }
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
