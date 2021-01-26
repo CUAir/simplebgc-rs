@@ -364,6 +364,7 @@ pub enum SpektrumModeBits {
 }
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
+#[repr(u8)]
 pub enum SpektrumMode {
     Auto = 0,
     DSM2Short10,
