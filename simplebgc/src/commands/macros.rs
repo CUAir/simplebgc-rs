@@ -25,7 +25,7 @@ macro_rules! read_flags {
         }
 
         m! {
-            BitFlags::from_bits_truncate($buf."get"())
+            BitFlags::from_bits($buf."get"()).or(Err(PayloadParseError::InvalidFlags { name: $name.into() }))
         }
     }}
 }

@@ -246,7 +246,8 @@ fn get_parser_for_field(info: &FieldInfo) -> Option<TokenStream2> {
             };
 
             Some(quote_spanned! {span=>
-                let #var = BitFlags::from_bits_truncate(_b.#get_value());
+                let #var = BitFlags::from_bits(_b.#get_value())
+                    .or(Err(PayloadParseError::InvalidFlags { name: #name.into() }))?;
             })
         }
         FieldKind::Enum { repr } => {
