@@ -242,8 +242,8 @@ pub enum FollowMode {
 #[repr(i8)]
 pub enum Orientation {
     PosX = 1,
-    PosY = 2,
-    PosZ = 3,
+    PosY,
+    PosZ,
     NegX = -1,
     NegY = -2,
     NegZ = -3,
@@ -524,6 +524,10 @@ pub struct Params3Data {
 
     #[kind(raw)]
     pub follow_expo_rate: u8,
+
+    #[kind(payload)]
+    #[size(3)]
+    pub follow_offset: RollPitchYaw<i8>,
 
     #[kind(enumeration)]
     #[format(i8)]
