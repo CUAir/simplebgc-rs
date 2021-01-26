@@ -334,6 +334,10 @@ impl Decoder for V1Codec {
     type Error = MessageParseError;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        if src.len() < 3 {
+            // not enough data to read length marker
+            return Ok(None);
+        }
         match IncomingCommand::from_bytes(&src[..]) {
             Ok((m, num_bytes)) => {
                 src.advance(num_bytes);
@@ -350,6 +354,10 @@ impl Decoder for V2Codec {
     type Error = MessageParseError;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        if src.len() < 3 {
+            // not enough data to read length marker
+            return Ok(None);
+        }
         match IncomingCommand::from_bytes(&src[..]) {
             Ok((m, num_bytes)) => {
                 src.advance(num_bytes);
