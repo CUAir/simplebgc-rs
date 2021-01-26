@@ -31,6 +31,7 @@ pub enum IncomingCommand {
     CommandConfirm(ConfirmData),
     CommandError(ErrorData),
     BoardInfo(BoardInfo),
+    BoardInfo3(BoardInfo3),
     GetAngles(RollPitchYaw<AngleInfo>),
     ReadParams(Params3Data),
     ReadParams3(Params3Data),
