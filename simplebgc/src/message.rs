@@ -5,8 +5,13 @@ use bytes::{BufMut, Bytes, BytesMut};
 use thiserror::Error;
 use tokio_util::codec::{Encoder, Decoder};
 
+pub trait SbgcCodec {}
+
 pub struct V1Codec;
 pub struct V2Codec;
+
+impl SbgcCodec for V1Codec {}
+impl SbgcCodec for V2Codec {}
 
 #[derive(Error, Debug)]
 pub enum MessageParseError {
