@@ -30,9 +30,9 @@ pub struct AxisRcParams {
     /// Units: degrees
     #[kind(raw)]
     pub rc_max_angle: i16,
-    #[kind(flags)]
+    #[kind(enumeration)]
     #[format(u8)]
-    pub rc_mode: BitFlags<AxisRcMode>,
+    pub rc_mode: AxisRcMode,
     #[kind(raw)]
     pub rc_lpf: u8,
     #[kind(raw)]
@@ -47,12 +47,15 @@ pub struct AxisRcParams {
 
 payload_rpy!(AxisRcParams, 8);
 
-#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum AxisRcMode {
-    Angle = 1 << 0,
-    Speed = 1 << 1,
-    Inverted = 1 << 2,
+    AngleRegular = 0b0000,
+    Speed = 0b0001,
+    AngleTracking = 0b0010,
+    InvertedAngleRegular = 0b1000,
+    InvertedSpeed = 0b1001,
+    InvertedAngleTracking = 0b1010,
 }
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
@@ -173,14 +176,6 @@ impl ToPrimitive for RcMap {
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
-pub enum RcMixRate {
-    FullRc = 0,
-    HalfHalf = 32,
-    FullFc = 63,
-}
-
-#[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
-#[repr(u8)]
 pub enum RcMixChannel {
     None = 0,
     Roll,
@@ -188,32 +183,38 @@ pub enum RcMixChannel {
     Yaw,
 }
 
-#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
-pub struct RcMix(
-    #[kind(enumeration)]
-    #[name("")]
-    #[format(u8)]
-    pub RcMixRate,
-    #[kind(enumeration)]
-    #[name("")]
-    #[format(u8)]
-    pub RcMixChannel,
-);
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct RcMix {
+    pub rc_mix_rate: u8,
+    pub rc_mix_channel: RcMixChannel,
+}
 
-impl FromPrimitive for RcMix {
-    fn from_i64(n: i64) -> Option<Self> {
-        FromPrimitive::from_u8(n as u8)
+impl Payload for RcMix {
+    fn from_bytes(b: Bytes) -> Result<Self, PayloadParseError>
+    where
+            Self: Sized {
+        // We expect one byte
+        if b.len() < 1 {
+            return Err(PayloadParseError::InvalidFlags { name: "RcMixRate".into() });
+        }
+        let byte = b[0];
+        // Bits [0..4] bits are for rc_mix_rate
+        let rc_mix_rate = 0b00011111 & byte;
+        // Bits [5..7] are for rc_mix_channel, so we right shift 5 to the right
+        let rc_mix_channel = RcMixChannel::from_u8(byte >> 5).unwrap();
+        Ok(RcMix {
+            rc_mix_rate,
+            rc_mix_channel,
+        })
     }
 
-    fn from_u8(b: u8) -> Option<Self> {
-        Some(RcMix(
-            FromPrimitive::from_u8(b & 0b111111)?,
-            FromPrimitive::from_u8(b >> 5)?,
-        ))
-    }
-
-    fn from_u64(b: u64) -> Option<Self> {
-        FromPrimitive::from_u8(b as u8)
+    fn to_bytes(&self) -> Bytes
+    where
+            Self: Sized {
+        let mut b = BytesMut::new();
+        let byte = self.rc_mix_rate | (self.rc_mix_channel.to_u8().unwrap() << 5);
+        b.put_u8(byte);
+        b.freeze()
     }
 }
 
@@ -269,7 +270,7 @@ pub enum MotorOutput {
     I2CDrv4,
 }
 
-#[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
+#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum BeeperMode {
     Calibrate = 1,
@@ -351,6 +352,7 @@ pub enum SpektrumModeBits {
 }
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
+#[repr(u8)]
 pub enum SpektrumMode {
     Auto = 0,
     DSM2Short10,
@@ -394,12 +396,12 @@ pub enum ImuType {
 pub struct RcMixes {
     #[kind(payload)]
     #[name("RC_MIX_FC_ROLL")]
-    #[size(2)]
+    #[size(1)]
     pub fc_roll: RcMix,
 
     #[kind(payload)]
     #[name("RC_MIX_FC_PITCH")]
-    #[size(2)]
+    #[size(1)]
     pub fc_pitch: RcMix,
 }
 
@@ -512,6 +514,10 @@ pub struct Params3Data {
     #[kind(raw)]
     pub follow_expo_rate: u8,
 
+    #[kind(payload)]
+    #[size(3)]
+    pub follow_offset: RollPitchYaw<i8>,
+
     #[kind(enumeration)]
     #[format(i8)]
     pub axis_top: Orientation,
@@ -563,9 +569,9 @@ pub struct Params3Data {
     #[kind(raw)]
     pub bat_comp_ref: i16,
 
-    #[kind(enumeration)]
+    #[kind(flags)]
     #[format(u8)]
-    pub beeper_mode: BeeperMode,
+    pub beeper_mode: BitFlags<BeeperMode>,
 
     #[kind(raw)]
     #[format(u8)]
@@ -587,6 +593,11 @@ pub struct Params3Data {
     pub frame_angle_from_motors: bool,
     /// Disabled = 0
     /// 1..32 - Virtual channel number as source of data to be output
+
+    #[kind(payload)]
+    #[size(6)]
+    pub rc_memory: RollPitchYaw<i16>,
+
     #[kind(raw)]
     pub servo_out: [u8; 4],
     /// PWM frequency, 10 Hz per unit.
@@ -605,6 +616,10 @@ pub struct Params3Data {
 
     #[kind(raw)]
     pub adaptive_pid_recovery_factor: u8,
+
+    #[kind(payload)]
+    #[size(3)]
+    pub follow_lpf: RollPitchYaw<u8>,
 
     #[kind(flags)]
     #[format(u16)]

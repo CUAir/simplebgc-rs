@@ -67,3 +67,27 @@ pub struct BoardInfo {
     #[kind(raw)]
     pub reserved: [u8; 7],
 }
+
+#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
+pub struct BoardInfo3 {
+    #[kind(raw)]
+    pub device_id: [u8; 9],
+
+    #[kind(raw)]
+    pub mcu_id: [u8; 12],
+
+    #[kind(raw)]
+    pub eeprom_size: u32,
+
+    #[kind(raw)]
+    pub script_slot_size: u16,
+
+    #[kind(raw)]
+    pub profile_set_slots: u8,
+
+    #[kind(raw)]
+    pub profile_set_cur: u8,
+
+    #[kind(raw)]
+    pub reserved: [u8; 32],
+}

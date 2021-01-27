@@ -3,7 +3,7 @@ use quote::format_ident;
 
 use crate::primitive::*;
 use std::convert::TryInto;
-use syn::export::Span;
+use proc_macro2::Span;
 use syn::spanned::Spanned;
 use syn::*;
 

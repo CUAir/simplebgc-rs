@@ -3,8 +3,17 @@ use crate::payload::*;
 use crate::{IncomingCommand, OutgoingCommand};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use thiserror::Error;
+use tokio_util::codec::{Encoder, Decoder};
 
-#[derive(Error, Clone, Debug, PartialEq)]
+pub trait SbgcCodec {}
+
+pub struct V1Codec;
+pub struct V2Codec;
+
+impl SbgcCodec for V1Codec {}
+impl SbgcCodec for V2Codec {}
+
+#[derive(Error, Debug)]
 pub enum MessageParseError {
     #[error("bad version code")]
     BadVersionCode,
@@ -18,6 +27,14 @@ pub enum MessageParseError {
     InsufficientData,
     #[error(transparent)]
     PayloadParse(#[from] PayloadParseError),
+    #[error("there was an IO error")]
+    IoError(std::io::Error),
+}
+
+impl From<std::io::Error> for MessageParseError {
+    fn from(error: std::io::Error) -> Self {
+        MessageParseError::IoError(error)
+    }
 }
 
 pub trait Message {
@@ -41,7 +58,7 @@ pub trait Message {
         buf.put_u8(payload.len() as u8);
 
         let header_checksum = cmd.wrapping_add(payload.len() as u8);
-        let payload_checksum = payload.bytes().iter().fold(0u8, |l, r| l.wrapping_add(*r));
+        let payload_checksum = payload.iter().fold(0u8, |l, r| l.wrapping_add(*r));
 
         buf.put_u8(header_checksum);
         buf.put(payload);
@@ -273,6 +290,7 @@ impl Message for IncomingCommand {
             IncomingCommand::CommandConfirm(_) => CMD_CONFIRM,
             IncomingCommand::CommandError(_) => CMD_ERROR,
             IncomingCommand::BoardInfo(_) => CMD_BOARD_INFO,
+            IncomingCommand::BoardInfo3(_) => CMD_BOARD_INFO_3,
             IncomingCommand::GetAngles(_) => CMD_GET_ANGLES,
             IncomingCommand::ReadParams(_) => CMD_READ_PARAMS,
             IncomingCommand::ReadParams3(_) => CMD_READ_PARAMS_3,
@@ -286,6 +304,7 @@ impl Message for IncomingCommand {
             CommandConfirm(data) => Payload::to_bytes(data),
             CommandError(data) => Payload::to_bytes(data),
             BoardInfo(info) => Payload::to_bytes(info),
+            BoardInfo3(info) => Payload::to_bytes(info),
             GetAngles(angles) => Payload::to_bytes(angles),
             ReadParams(params) => Payload::to_bytes(params),
             ReadParams3(params) => Payload::to_bytes(params),
@@ -303,11 +322,73 @@ impl Message for IncomingCommand {
             CMD_CONFIRM => CommandConfirm(Payload::from_bytes(bytes)?),
             CMD_ERROR => CommandError(Payload::from_bytes(bytes)?),
             CMD_BOARD_INFO => BoardInfo(Payload::from_bytes(bytes)?),
+            CMD_BOARD_INFO_3 => BoardInfo3(Payload::from_bytes(bytes)?),
             CMD_GET_ANGLES => GetAngles(Payload::from_bytes(bytes)?),
             CMD_READ_PARAMS => ReadParams(Payload::from_bytes(bytes)?),
             CMD_READ_PARAMS_3 => ReadParams3(Payload::from_bytes(bytes)?),
+            CMD_REALTIME_DATA_3 => RealtimeData3(Payload::from_bytes(bytes)?),
             _ => return Err(MessageParseError::BadCommandId { id }),
         })
+    }
+}
+
+impl Decoder for V1Codec {
+    type Item = IncomingCommand;
+    type Error = MessageParseError;
+
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        if src.len() < 5 {
+            // not enough data to read length marker
+            return Ok(None);
+        }
+        match IncomingCommand::from_bytes(&src[..]) {
+            Ok((m, num_bytes)) => {
+                src.advance(num_bytes);
+                Ok(Some(m))
+            },
+            Err(MessageParseError::InsufficientData) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+impl Decoder for V2Codec {
+    type Item = IncomingCommand;
+    type Error = MessageParseError;
+
+    fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        if src.len() < 6 {
+            // not enough data to read length marker
+            return Ok(None);
+        }
+        match IncomingCommand::from_bytes(&src[..]) {
+            Ok((m, num_bytes)) => {
+                src.advance(num_bytes);
+                Ok(Some(m))
+            },
+            Err(MessageParseError::InsufficientData) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+impl Encoder<OutgoingCommand> for V1Codec {
+    type Error = MessageParseError;
+
+    fn encode(&mut self, item: OutgoingCommand, dst: &mut BytesMut) -> Result<(), Self::Error> {
+        let bytes = item.to_v1_bytes();
+        dst.put_slice(&bytes[..]);
+        Ok(())
+    }
+}
+
+impl Encoder<OutgoingCommand> for V2Codec {
+    type Error = MessageParseError;
+
+    fn encode(&mut self, item: OutgoingCommand, dst: &mut BytesMut) -> Result<(), Self::Error> {
+        let bytes = item.to_v2_bytes();
+        dst.put_slice(&bytes[..]);
+        Ok(())
     }
 }
 
