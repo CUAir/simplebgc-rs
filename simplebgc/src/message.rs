@@ -233,6 +233,7 @@ impl Message for OutgoingCommand {
             RealtimeData3 => CMD_REALTIME_DATA_3,
             GetAngles => CMD_GET_ANGLES,
             GetAnglesExt => CMD_GET_ANGLES,
+            DataStreamInterval(_) => CMD_DATA_STREAM_INTERVAL,
             _ => unimplemented!(),
         }
     }
@@ -256,6 +257,7 @@ impl Message for OutgoingCommand {
             RealtimeData3 => Bytes::default(),
             GetAngles => Bytes::default(),
             GetAnglesExt => Bytes::default(),
+            DataStreamInterval(data) => Payload::to_bytes(data),
             Other { id: _ } => Bytes::default(),
         }
     }
@@ -279,6 +281,7 @@ impl Message for OutgoingCommand {
             CMD_CONTROL => Control(Payload::from_bytes(bytes)?),
             CMD_MOTORS_ON => MotorsOn,
             CMD_MOTORS_OFF => MotorsOff(Payload::from_bytes(bytes)?),
+            CMD_DATA_STREAM_INTERVAL => DataStreamInterval(Payload::from_bytes(bytes)?),
             _ => return Err(MessageParseError::BadCommandId { id }),
         })
     }

@@ -5,6 +5,7 @@ pub(crate) mod constants;
 mod board_info;
 mod cmd_response;
 mod control;
+mod data_stream;
 mod get_angles;
 mod motors_off;
 mod read_params;
@@ -13,6 +14,7 @@ mod realtime;
 pub use self::board_info::*;
 pub use self::cmd_response::*;
 pub use self::control::*;
+pub use self::data_stream::*;
 pub use self::get_angles::*;
 pub use self::motors_off::*;
 pub use self::read_params::*;
@@ -56,5 +58,6 @@ pub enum OutgoingCommand {
     RealtimeData3,
     GetAngles,
     GetAnglesExt,
+    DataStreamInterval(DataStreamInterval),
     Other { id: u8 },
 }
