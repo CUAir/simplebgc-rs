@@ -50,10 +50,12 @@ payload_rpy!(AxisRcParams, 8);
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum AxisRcMode {
-    Angle = 0,
+    AngleRegular = 0,
     Speed = 1,
-    InvertedAngle = 8,
+    AngleTracking = 2,
+    InvertedAngleRegular = 8,
     InvertedSpeed = 9,
+    InvertedAngleTracking = 10,
 }
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
