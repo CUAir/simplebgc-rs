@@ -30,9 +30,9 @@ pub struct AxisRcParams {
     /// Units: degrees
     #[kind(raw)]
     pub rc_max_angle: i16,
-    #[kind(flags)]
+    #[kind(enumeration)]
     #[format(u8)]
-    pub rc_mode: BitFlags<AxisRcMode>,
+    pub rc_mode: AxisRcMode,
     #[kind(raw)]
     pub rc_lpf: u8,
     #[kind(raw)]
@@ -47,12 +47,12 @@ pub struct AxisRcParams {
 
 payload_rpy!(AxisRcParams, 8);
 
-#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum AxisRcMode {
-    Angle = 1 << 0,
-    Fixed = 1 << 1,
-    Inverted = 1 << 3,
+    Angle = 1,
+    Speed = 2,
+    Inverted = 4,
 }
 
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
