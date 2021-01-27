@@ -3,6 +3,7 @@ use crate::{Payload, PayloadParseError};
 #[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum SyncToData {
+    None = 0,
     ImuAttitude = 1,
 }
 
