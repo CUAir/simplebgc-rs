@@ -195,10 +195,12 @@ impl Payload for RcMix {
             Self: Sized {
         // We expect one byte
         if b.len() < 1 {
-            return Err(PayloadParseError::InvalidFlags{ name: "RcMixRate".into() });
+            return Err(PayloadParseError::InvalidFlags { name: "RcMixRate".into() });
         }
         let byte = b[0];
+        // Bits [0..4] bits are for rc_mix_rate
         let rc_mix_rate = 0b00011111 & byte;
+        // Bits [5..7] are for rc_mix_channel, so we right shift 5 to the right
         let rc_mix_channel = RcMixChannel::from_u8(byte >> 5).unwrap();
         Ok(RcMix {
             rc_mix_rate,
@@ -210,7 +212,7 @@ impl Payload for RcMix {
     where
             Self: Sized {
         let mut b = BytesMut::new();
-        let byte = self.rc_mix_rate & (self.rc_mix_channel.to_u8().unwrap() << 5);
+        let byte = self.rc_mix_rate | (self.rc_mix_channel.to_u8().unwrap() << 5);
         b.put_u8(byte);
         b.freeze()
     }
