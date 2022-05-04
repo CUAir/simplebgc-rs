@@ -1,6 +1,6 @@
 use crate::{Payload, PayloadParseError, RollPitchYaw};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use enumflags2::BitFlags;
+use enumflags2::{BitFlags, bitflags};
 use num_traits::{FromPrimitive, ToPrimitive};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -69,7 +69,8 @@ pub enum AxisControlMode {
     HighRes = 6,
 }
 
-#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[bitflags]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum AxisControlFlags {
     /// If mode is one of the <MODE_ANGLE,

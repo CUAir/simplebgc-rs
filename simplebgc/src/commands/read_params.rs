@@ -1,6 +1,6 @@
 use crate::*;
 use bytes::{BufMut, Bytes, BytesMut};
-use enumflags2::BitFlags;
+use enumflags2::{BitFlags, bitflags};
 use num_traits::*;
 
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
@@ -270,7 +270,8 @@ pub enum MotorOutput {
     I2CDrv4,
 }
 
-#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[bitflags]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum BeeperMode {
     Calibrate = 1,
@@ -280,7 +281,8 @@ pub enum BeeperMode {
     Motors = 128,
 }
 
-#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[bitflags]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum AdaptivePid {
     Roll = 1,
@@ -288,7 +290,8 @@ pub enum AdaptivePid {
     Yaw = 4,
 }
 
-#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[bitflags]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u16)]
 pub enum GeneralFlags {
     RememberLastUsedProfile = 1 << 0,
@@ -307,7 +310,8 @@ pub enum GeneralFlags {
     IsUpsideDown = 1 << 13,
 }
 
-#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[bitflags]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u16)]
 pub enum ProfileFlags {
     Adc1AutoDetection = 1 << 0,

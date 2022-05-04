@@ -1,7 +1,8 @@
 use crate::{Payload, PayloadParseError};
-use enumflags2::BitFlags;
+use enumflags2::{BitFlags, bitflags};
 
-#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[bitflags]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum StateFlags1 {
     DebugMode = 1 << 0,
@@ -11,7 +12,8 @@ pub enum StateFlags1 {
     StartupAutoRoutineDone = 1 << 4,
 }
 
-#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[bitflags]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u16)]
 pub enum BoardFeatures {
     ThreeAxis = 1 << 0,
@@ -32,7 +34,8 @@ pub enum BoardFeatures {
     BigFlash = 1 << 15,
 }
 
-#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[bitflags]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum ConnectionFlag {
     USB = 1 << 0,

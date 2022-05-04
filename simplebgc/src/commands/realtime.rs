@@ -1,8 +1,9 @@
 use crate::*;
 use bytes::{BufMut, Bytes, BytesMut};
-use enumflags2::BitFlags;
+use enumflags2::{BitFlags, bitflags};
 
-#[derive(BitFlags, Copy, Clone, Debug, PartialEq)]
+#[bitflags]
+#[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum RTDataFlags {
     MotorsOn = 1 << 0,
