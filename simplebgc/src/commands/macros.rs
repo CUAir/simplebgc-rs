@@ -6,13 +6,8 @@ macro_rules! read_enum {
     ($buf: ident, $name: literal, $repr: ident, $kind: ident) => {{
         use num_traits::{FromPrimitive};
 
-        mashup! {
-            m["from"] = from_ $kind;
-            m["get"] = get_ $repr;
-        }
-
-        m! {
-            FromPrimitive::"from"($buf."get"()).ok_or(PayloadParseError::InvalidEnum { name: $name.into() })
+        paste! {
+            FromPrimitive::[< from_ $kind >]($buf.[< get_ $repr >]()).ok_or(PayloadParseError::InvalidEnum { name: $name.into() })
         }
     }};
 }
@@ -20,12 +15,8 @@ macro_rules! read_enum {
 #[macro_export]
 macro_rules! read_flags {
     ($buf: ident, $name: literal, $repr: ident) => {{
-        mashup! {
-            m["get"] = get_ $repr;
-        }
-
-        m! {
-            BitFlags::from_bits($buf."get"()).or(Err(PayloadParseError::InvalidFlags { name: $name.into() }))
+        paste! {
+            BitFlags::from_bits($buf.[< get_ $repr >]()).or(Err(PayloadParseError::InvalidFlags { name: $name.into() }))
         }
     }}
 }
@@ -33,12 +24,8 @@ macro_rules! read_flags {
 #[macro_export]
 macro_rules! read_flags_truncate {
     ($buf: ident, $name: literal, $repr: ident) => {{
-        mashup! {
-            m["get"] = get_ $repr;
-        }
-
-        m! {
-            BitFlags::from_bits_truncate($buf."get"())
+        paste! {
+            BitFlags::from_bits_truncate($buf.[< get_ $repr >]())
         }
     }};
 }
