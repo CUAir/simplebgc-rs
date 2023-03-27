@@ -37,6 +37,8 @@ impl From<std::io::Error> for MessageParseError {
     }
 }
 
+
+
 pub trait Message {
     fn command_id(&self) -> u8;
 
@@ -81,7 +83,7 @@ pub trait Message {
         buf.put_u8(header_checksum);
         buf.put(payload);
 
-        let payload_checksum = crc16::State::<crc16::ARC>::calculate(&buf[1..]);
+        let payload_checksum = checksum_bgc_v2(&buf[1..]);
         buf.put_u16_le(payload_checksum);
 
         buf.freeze()
