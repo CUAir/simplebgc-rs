@@ -77,10 +77,11 @@ pub trait Message {
         buf.put_u8(payload.len() as u8);
 
         let header_checksum = cmd.wrapping_add(payload.len() as u8);
-        let payload_checksum = crc16::State::<crc16::ARC>::calculate(&payload[..]);
 
         buf.put_u8(header_checksum);
         buf.put(payload);
+
+        let payload_checksum = crc16::State::<crc16::ARC>::calculate(&buf[1..]);
         buf.put_u16_le(payload_checksum);
 
         buf.freeze()
