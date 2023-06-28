@@ -35,6 +35,7 @@ pub enum IncomingCommand {
     GetAngles(RollPitchYaw<AngleInfo>),
     ReadParams(Params3Data),
     ReadParams3(Params3Data),
+    ReadParamsExt(ParamsExtData),
     RealtimeData3(RealtimeData3),
 }
 

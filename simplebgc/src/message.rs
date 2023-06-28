@@ -297,6 +297,7 @@ impl Message for IncomingCommand {
             IncomingCommand::GetAngles(_) => CMD_GET_ANGLES,
             IncomingCommand::ReadParams(_) => CMD_READ_PARAMS,
             IncomingCommand::ReadParams3(_) => CMD_READ_PARAMS_3,
+            IncomingCommand::ReadParamsExt(_) => CMD_READ_PARAMS_EXT,
             IncomingCommand::RealtimeData3(_) => CMD_REALTIME_DATA_3,
         }
     }
@@ -311,6 +312,7 @@ impl Message for IncomingCommand {
             GetAngles(angles) => Payload::to_bytes(angles),
             ReadParams(params) => Payload::to_bytes(params),
             ReadParams3(params) => Payload::to_bytes(params),
+            ReadParamsExt(params) => Payload::to_bytes(params),
             RealtimeData3(data) => Payload::to_bytes(data),
         }
     }
@@ -329,6 +331,7 @@ impl Message for IncomingCommand {
             CMD_GET_ANGLES => GetAngles(Payload::from_bytes(bytes)?),
             CMD_READ_PARAMS => ReadParams(Payload::from_bytes(bytes)?),
             CMD_READ_PARAMS_3 => ReadParams3(Payload::from_bytes(bytes)?),
+            CMD_READ_PARAMS_EXT => ReadParamsExt(Payload::from_bytes(bytes)?),
             CMD_REALTIME_DATA_3 => RealtimeData3(Payload::from_bytes(bytes)?),
             _ => return Err(MessageParseError::BadCommandId { id }),
         })
