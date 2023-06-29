@@ -58,7 +58,7 @@ impl Payload for u16 {
     where
         Self: Sized,
     {
-        Ok(b.get_u16())
+        Ok(b.get_u16_le())
     }
 
     fn to_bytes(&self) -> Bytes
