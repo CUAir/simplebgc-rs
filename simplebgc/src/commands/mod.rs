@@ -1,6 +1,6 @@
 #[macro_use]
 pub(crate) mod macros;
-pub(crate) mod constants;
+pub mod constants;
 
 mod board_info;
 mod cmd_response;
@@ -9,6 +9,7 @@ mod get_angles;
 mod motors_off;
 mod read_params;
 mod realtime;
+mod raw_message;
 
 pub use self::board_info::*;
 pub use self::cmd_response::*;
@@ -17,6 +18,7 @@ pub use self::get_angles::*;
 pub use self::motors_off::*;
 pub use self::read_params::*;
 pub use self::realtime::*;
+pub use self::raw_message::*;
 
 use crate::{Payload, PayloadParseError, RollPitchYaw};
 use bytes::{BufMut, Bytes, BytesMut};
@@ -28,6 +30,7 @@ payload_rpy!(i16, 2);
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IncomingCommand {
+    RawMessage(raw_message::RawMessage),
     CommandConfirm(ConfirmData),
     CommandError(ErrorData),
     BoardInfo(BoardInfo),
@@ -57,5 +60,6 @@ pub enum OutgoingCommand {
     RealtimeData3,
     GetAngles,
     GetAnglesExt,
-    Other { id: u8 },
+    Other { id: u8 }, //arbitrary message with empty payload?
+    RawMessage(raw_message::RawMessage),
 }

@@ -236,6 +236,7 @@ impl Message for OutgoingCommand {
             RealtimeData3 => CMD_REALTIME_DATA_3,
             GetAngles => CMD_GET_ANGLES,
             GetAnglesExt => CMD_GET_ANGLES,
+            RawMessage(msg) => msg.typ,
             _ => unimplemented!(),
         }
     }
@@ -260,6 +261,7 @@ impl Message for OutgoingCommand {
             GetAngles => Bytes::default(),
             GetAnglesExt => Bytes::default(),
             Other { id: _ } => Bytes::default(),
+            RawMessage(data) => Payload::to_bytes(data),
         }
     }
 
@@ -299,6 +301,7 @@ impl Message for IncomingCommand {
             IncomingCommand::ReadParams3(_) => CMD_READ_PARAMS_3,
             IncomingCommand::ReadParamsExt(_) => CMD_READ_PARAMS_EXT,
             IncomingCommand::RealtimeData3(_) => CMD_REALTIME_DATA_3,
+            IncomingCommand::RawMessage(msg) => msg.typ,
         }
     }
 
@@ -314,6 +317,7 @@ impl Message for IncomingCommand {
             ReadParams3(params) => Payload::to_bytes(params),
             ReadParamsExt(params) => Payload::to_bytes(params),
             RealtimeData3(data) => Payload::to_bytes(data),
+            RawMessage(msg) => Payload::to_bytes(msg),
         }
     }
 
@@ -333,7 +337,7 @@ impl Message for IncomingCommand {
             CMD_READ_PARAMS_3 => ReadParams3(Payload::from_bytes(bytes)?),
             CMD_READ_PARAMS_EXT => ReadParamsExt(Payload::from_bytes(bytes)?),
             CMD_REALTIME_DATA_3 => RealtimeData3(Payload::from_bytes(bytes)?),
-            _ => return Err(MessageParseError::BadCommandId { id }),
+            _ => IncomingCommand::RawMessage(crate::RawMessage{typ: id, payload: bytes}),
         })
     }
 }
