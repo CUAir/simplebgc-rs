@@ -7,8 +7,13 @@ use tokio_util::codec::{Encoder, Decoder};
 
 pub trait SbgcCodec {}
 
+#[derive(Default)]
 pub struct V1Codec;
-pub struct V2Codec;
+#[derive(Default)]
+pub struct V2Codec{
+    in_sync: bool,
+}
+
 
 impl SbgcCodec for V1Codec {}
 impl SbgcCodec for V2Codec {}
@@ -367,17 +372,45 @@ impl Decoder for V2Codec {
     type Error = MessageParseError;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        if src.len() < 6 {
+        //println!("codec {}", src.remaining());
+        if ! self.in_sync {
+            let mut found = src.len();
+            for i in 0..src.len() {
+                if src[i] == 0x24 {
+                    found = i;
+                    println!("got start");
+                    break;
+                }
+            } 
+            src.advance(found);
+        }
+        if src.remaining() < 6 {
             // not enough data to read length marker
+            //println!("not enough data to read length marker");
             return Ok(None);
         }
-        match IncomingCommand::from_bytes(&src[..]) {
+        match IncomingCommand::from_bytes(src.chunk()) {
             Ok((m, num_bytes)) => {
+                //println!("message!");
+                self.in_sync = true;
                 src.advance(num_bytes);
                 Ok(Some(m))
             },
-            Err(MessageParseError::InsufficientData) => Ok(None),
-            Err(e) => Err(e),
+            Err(MessageParseError::InsufficientData) => {
+                //println!("MessageParseError::InsufficientData");
+                Ok(None)
+            },
+            Err(e) => {
+                src.advance(1); //to not get stuck
+                if self.in_sync {//lost sync, error
+                    println!("lost sync: {e:?}");
+                    self.in_sync = false; 
+                    Err(e)
+                } else { //just keep on looking for sync
+                    println!("failed to sync {e:?}, keep looking... ");
+                    Ok(None)
+                }
+            },
         }
     }
 }
