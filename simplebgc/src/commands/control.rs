@@ -103,6 +103,23 @@ pub enum AxisControlFlags {
     /// slow motion (like timelapse shooting).
     /// (frw. ver. 2.60+)
     HighResSpeed = 1 << 7,
+
+    /// Applicable for: MODE_ANGLE, MODE_ANGLE_SHORTEST,
+    ///MODE_ANGLE_REL_FRAME
+    ///If this flag is set, the speed is not decreased in a 
+    ///vicinity of target. It allows to get more predictive speed
+    ///profile for the motion trajectory. If not set, actual speed 
+    ///is decreased near target to smooth over the jerks when
+    ///distance to target is small and target is updated 
+    ///frequently by small steps
+    TargetPrecise = 1 << 5,
+
+    ///If this flag is set, the follow mode is not overridden, but 
+    ///is mixed with the commanded motion, like it happens 
+    ///for the regular RC control in SPEED or ANGLE mode. 
+    ///If this flag is not set, the commanded motion 
+    ///completely overrides the follow control for this axis.
+    MixFollow = 1 << 4,
 }
 
 impl FromPrimitive for AxisControlState {

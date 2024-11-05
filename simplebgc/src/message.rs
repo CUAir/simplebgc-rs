@@ -7,8 +7,13 @@ use tokio_util::codec::{Encoder, Decoder};
 
 pub trait SbgcCodec {}
 
+#[derive(Default)]
 pub struct V1Codec;
-pub struct V2Codec;
+#[derive(Default)]
+pub struct V2Codec{
+    in_sync: bool,
+}
+
 
 impl SbgcCodec for V1Codec {}
 impl SbgcCodec for V2Codec {}
@@ -236,6 +241,7 @@ impl Message for OutgoingCommand {
             RealtimeData3 => CMD_REALTIME_DATA_3,
             GetAngles => CMD_GET_ANGLES,
             GetAnglesExt => CMD_GET_ANGLES,
+            RawMessage(msg) => msg.typ,
             _ => unimplemented!(),
         }
     }
@@ -260,6 +266,7 @@ impl Message for OutgoingCommand {
             GetAngles => Bytes::default(),
             GetAnglesExt => Bytes::default(),
             Other { id: _ } => Bytes::default(),
+            RawMessage(data) => Payload::to_bytes(data),
         }
     }
 
@@ -297,7 +304,9 @@ impl Message for IncomingCommand {
             IncomingCommand::GetAngles(_) => CMD_GET_ANGLES,
             IncomingCommand::ReadParams(_) => CMD_READ_PARAMS,
             IncomingCommand::ReadParams3(_) => CMD_READ_PARAMS_3,
+            IncomingCommand::ReadParamsExt(_) => CMD_READ_PARAMS_EXT,
             IncomingCommand::RealtimeData3(_) => CMD_REALTIME_DATA_3,
+            IncomingCommand::RawMessage(msg) => msg.typ,
         }
     }
 
@@ -311,7 +320,9 @@ impl Message for IncomingCommand {
             GetAngles(angles) => Payload::to_bytes(angles),
             ReadParams(params) => Payload::to_bytes(params),
             ReadParams3(params) => Payload::to_bytes(params),
+            ReadParamsExt(params) => Payload::to_bytes(params),
             RealtimeData3(data) => Payload::to_bytes(data),
+            RawMessage(msg) => Payload::to_bytes(msg),
         }
     }
 
@@ -329,8 +340,9 @@ impl Message for IncomingCommand {
             CMD_GET_ANGLES => GetAngles(Payload::from_bytes(bytes)?),
             CMD_READ_PARAMS => ReadParams(Payload::from_bytes(bytes)?),
             CMD_READ_PARAMS_3 => ReadParams3(Payload::from_bytes(bytes)?),
+            CMD_READ_PARAMS_EXT => ReadParamsExt(Payload::from_bytes(bytes)?),
             CMD_REALTIME_DATA_3 => RealtimeData3(Payload::from_bytes(bytes)?),
-            _ => return Err(MessageParseError::BadCommandId { id }),
+            _ => IncomingCommand::RawMessage(crate::RawMessage{typ: id, payload: bytes}),
         })
     }
 }
@@ -360,17 +372,45 @@ impl Decoder for V2Codec {
     type Error = MessageParseError;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        if src.len() < 6 {
+        //println!("codec {}", src.remaining());
+        if ! self.in_sync {
+            let mut found = src.len();
+            for i in 0..src.len() {
+                if src[i] == 0x24 {
+                    found = i;
+                    println!("got start");
+                    break;
+                }
+            } 
+            src.advance(found);
+        }
+        if src.remaining() < 6 {
             // not enough data to read length marker
+            //println!("not enough data to read length marker");
             return Ok(None);
         }
-        match IncomingCommand::from_bytes(&src[..]) {
+        match IncomingCommand::from_bytes(src.chunk()) {
             Ok((m, num_bytes)) => {
+                //println!("message!");
+                self.in_sync = true;
                 src.advance(num_bytes);
                 Ok(Some(m))
             },
-            Err(MessageParseError::InsufficientData) => Ok(None),
-            Err(e) => Err(e),
+            Err(MessageParseError::InsufficientData) => {
+                //println!("MessageParseError::InsufficientData");
+                Ok(None)
+            },
+            Err(e) => {
+                src.advance(1); //to not get stuck
+                if self.in_sync {//lost sync, error
+                    println!("lost sync: {e:?}");
+                    self.in_sync = false; 
+                    Err(e)
+                } else { //just keep on looking for sync
+                    println!("failed to sync {e:?}, keep looking... ");
+                    Ok(None)
+                }
+            },
         }
     }
 }

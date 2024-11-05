@@ -396,6 +396,43 @@ pub enum ImuType {
     Frame,
 }
 
+#[bitflags]
+#[derive(Copy, Clone, Debug, PartialEq)]
+#[repr(u8)]
+pub enum FiltersEnFlags {
+    EnableNotch1 = 1,
+    EnableNotch2 = 2,
+    EnableNotch3 = 4,
+    EnableLPF = 8,
+}
+
+
+#[derive(FromPrimitive, ToPrimitive, Copy, Clone, Debug, PartialEq)]
+#[repr(u8)]
+#[allow(non_camel_case_types)]
+pub enum EncoderType {
+    AS5048A    = 1,
+    AS5048B    = 2,
+    AS5048_PWM = 3,
+    AMT203     = 4,
+    MA3_10BIT  = 5,
+    MA3_12BIT  = 6,
+    ANALOG     = 7,
+    I2C_DRV1   = 8,
+    I2C_DRV2   = 9,
+    I2C_DRV3   = 10,
+    I2C_DRV4   = 11,
+    AS5600_PWM = 12,
+    AS5600_I2C = 13,
+    RLS_ORBIS  = 14,
+    ORBIS_PWM  = 15,
+
+    SkipDetectionFlag = 1 << 4,
+    EncoderIsGeared = 1 << 7,
+}
+
+
+
 #[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
 pub struct RcMixes {
     #[kind(payload)]
@@ -657,4 +694,147 @@ pub struct Params3Data {
     /// profile ID which is currently active in the controller, 0...4
     #[kind(raw)]
     pub cur_profile_id: u8,
+}
+
+#[derive(BgcPayload, Clone, Debug, PartialEq)]
+pub struct ParamsExtData {
+    /// profile ID to read or write. To access current (active) profile,
+    /// specify 255. Possible values: 0..4
+    #[kind(raw)]
+    pub profile_id: u8,
+
+    #[kind(payload)]
+    #[size(6)]
+    pub notch1: NotchParams,
+    #[kind(payload)]
+    #[size(6)]
+    pub notch3: NotchParams,
+    #[kind(payload)]
+    #[size(6)]
+    pub notch2: NotchParams,
+
+    #[kind(payload)]
+    #[size(6)]
+    pub lpf_freq: RollPitchYaw<u16>,
+
+    #[kind(payload)]
+    #[size(3)]
+    pub filters_en: RollPitchYaw<u8>, //RollPitchYaw<BitFlags<FiltersEnFlags>>, but it does not work, not sure how to implement
+
+    ///units: 0.02197265625 deg, aka 2^14 units per turn
+    #[kind(payload)]
+    #[size(6)]
+    pub encoder_offset: RollPitchYaw<i16>,
+
+    #[kind(payload)]
+    #[size(6)]
+    pub encoder_field_offset: RollPitchYaw<i16>,
+
+    /// unit: 10ms
+    #[kind(payload)]
+    #[size(3)]
+    pub encoder_manual_set_time: RollPitchYaw<u8>,
+
+    #[kind(payload)]
+    #[size(3)]
+    pub motor_heating_factor: RollPitchYaw<u8>,
+
+    #[kind(payload)]
+    #[size(3)]
+    pub motor_cooling_factor: RollPitchYaw<u8>,
+
+    #[kind(raw)]
+    pub reserved: [u8; 2],
+
+    #[kind(raw)]
+    pub follow_inside_deadband: u8,
+
+    ///deprecated
+    #[kind(payload)]
+    #[size(3)]
+    pub motor_mag_link: RollPitchYaw<u8>,
+
+    ///8.8 fixed-point (1.0f <-> 256)
+    #[kind(payload)]
+    #[size(6)]
+    pub motor_gearing: RollPitchYaw<u16>,
+
+    ///deprecated
+    #[kind(payload)]
+    #[size(3)]
+    pub motor_coolingencoder_limit_min: RollPitchYaw<i8>,
+
+    ///deprecated
+    #[kind(payload)]
+    #[size(3)]
+    pub motor_coolingencoder_limit_max: RollPitchYaw<i8>,
+
+    #[kind(payload)]
+    #[size(3)]
+    pub notch1_gain: RollPitchYaw<i8>,
+    
+    #[kind(payload)]
+    #[size(3)]
+    pub notch2_gain: RollPitchYaw<i8>,
+    
+    #[kind(payload)]
+    #[size(3)]
+    pub notch3_gain: RollPitchYaw<i8>,
+
+    #[kind(raw)]
+    pub beeper_volume: u8,
+
+    ///unit: 0.001
+    #[kind(payload)]
+    #[size(6)]
+    pub encoder_gear_ratio: RollPitchYaw<u16>,
+    
+    #[kind(payload)]
+    #[size(3)]
+    pub encoder_type: RollPitchYaw<u8>, //#FIXME: EncoderType enum + bitflags, not sure how to implement
+
+    #[kind(payload)]
+    #[size(3)]
+    pub encoder_cfg: RollPitchYaw<u8>, //#FIXME: enum or "internal encoder type", not sure how to implement
+
+    #[kind(payload)]
+    #[size(3)]
+    pub outer_p: RollPitchYaw<u8>,
+
+    #[kind(payload)]
+    #[size(3)]
+    pub outer_i: RollPitchYaw<u8>,
+
+    #[kind(enumeration)]
+    #[format(i8)]
+    pub mag_axis_top: Orientation,
+
+    #[kind(enumeration)]
+    #[format(i8)]
+    pub mag_axis_right: Orientation,
+
+    #[kind(raw)]
+    pub mag_trust: u8,
+
+    ///unit: 1 degree
+    #[kind(raw)]
+    pub mag_declination: i8,
+
+    #[kind(raw)]
+    pub acc_lpf_freq: u16,
+
+    #[kind(payload)]
+    #[size(3)]
+    pub d_term_lpf_freq: RollPitchYaw<u8>,
+
+}
+
+#[derive(BgcPayload, Copy, Clone, Debug, PartialEq)]
+pub struct NotchParams {
+    #[kind(payload)]
+    #[size(3)]
+    pub freq: RollPitchYaw<u8>,
+    #[kind(payload)]
+    #[size(3)]
+    pub bw: RollPitchYaw<u8>,
 }
